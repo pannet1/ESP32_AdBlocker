@@ -1,6 +1,6 @@
 # ESP_hole Product Memory
 
-Last updated: 2026-08-16 (base project switched to s60sc/ESP32_AdBlocker; prototype order PLACED)
+Last updated: 2026-08-24 (ESP32-S3 connected & working; ENC28J60 shipped by mistake instead of W5500)
 
 ## What this project is
 
@@ -38,6 +38,18 @@ and targets the **latest ESP32-S3**.
   (`externalDNS.cpp`). Configurable DNS servers (`ST_ns1`, `ST_ns2`).
 - **Static IP** supported (`ST_ip`) — recommended so clients always find it.
 
+### List management design (decided 2026-08-24)
+- **Blacklist = creator-managed, remote**: we host ONE consolidated HOSTS-format
+  file at a stable URL (our own GitHub repo / release asset; base =
+  StevenBlack/hosts + our additions). Device's blocklist URL is set once in the
+  dashboard → auto-downloads **daily** at set time. We push updates by
+  committing upstream; devices converge within 24h (or manual Reload).
+- **Whitelist = end-user managed, from dashboard**: use built-in DelDomain —
+  deletions persist to `/data/custom` as `#domain` lines and are re-applied
+  after EVERY blocklist reload (`loadCustom()` appSpecific.cpp:251), so user
+  unblocks survive daily blacklist refreshes. AddDomain works inversely.
+  Optional later: a Whitelist tab listing `/data/custom` contents for visibility.
+
 ## The core product design problem
 
 The ESP is just a DNS server — devices must be told to use it. Non-technical
@@ -57,11 +69,19 @@ router as DNS proxy, which forwards to the ESP → network-wide blocking with
 ### Hardware decision: ESP32-S3-N16R8 + W5500 (SPI Ethernet)
 - **MCU: ESP32-S3 DevKit-N16R8** — 16MB flash + **8MB PSRAM**, dual-core LX7,
   native USB-C. 8MB PSRAM = the recommended config for the current blocklist.
-- **Ethernet: W5500 SPI module** — correct for S3 because the **ESP32-S3 has
-  NO RMII Ethernet MAC** (Espressif removed EMAC on the S3; confirmed in
-  arduino-esp32 issue #10977). A LAN8720 would NOT work. W5500 is a complete
-  controller (MAC + PHY + hardwired TCP/IP, 8 sockets, 80MHz SPI) and is the
-  exact controller this project tests on the S3.
+  **STATUS: board received, connected, working (2026-08-24).**
+- Ethernet: W5500 SPI module — correct for S3 because the **ESP32-S3 has
+  NO RMII Ethernet MAC**. A LAN8720 would NOT work.
+- ⚠️ **Seller shipped ENC28J60 by mistake instead of W5500** (2026-08-24).
+  ❌ **ENC28J60 is UNUSABLE with this project**: ESP-IDF & arduino-esp32
+  (verified core 3.3.11) support only DM9051 / W5500 / KSZ8851SNL SPI ethernet
+  — no ENC28J60 driver exists at all. Patch attempt reverted; `utils.cpp` keeps
+  `#define ETH_SPI_PHY_TYPE ETH_PHY_W5500`.
+  - Action: request W5500 replacement from seller / reorder (~₹309).
+  - Meanwhile: run on **WiFi** (`netMode` default) — fully functional for DNS.
+  - Core note: in 3.3.11 the ETH API lives in `libraries/Ethernet/src/ETH.h`;
+    `ETH_PHY_SPI_FREQ_MHZ = 20`; FQBN options verified:
+    `FlashSize=16M,PSRAM=opi,PartitionScheme=custom` (+ our partitions.csv).
 
 ### Prototype order PLACED (₹1,100 total)
 | Component                             | Qty | Price |
@@ -108,20 +128,36 @@ Reference pin map (mischianti Core 3 guide):
 
 ## Jio Centrum Home Gateway check (JCOW404, JioFiber) — for the setup step
 
+**STATUS 2026-08-24: router DNS switch NOT yet working — deep dive in progress**
+- ESP side verified good: `dig @192.168.29.191 doubleclick.net` → `0.0.0.0` ✓,
+  `github.com` resolves ✓.
+- Manual "Use Below" attempt + router reboot did NOT take effect:
+  `dig @192.168.29.1 doubleclick.net` still returns real IPs → router not
+  proxying to ESP. Either Save silently failed or reboot reverted it.
+- Router reboots kill the admin web session → fresh login required each time.
+- Login page (TeamF1 UI): fields `users.username` / `users.password`
+  (ids `tf1_userName` / `tf1_password`), form POST to platform.cgi. Admin user
+  is `admin`; password known to user + agent session only — NOT stored here.
+- NEXT STEPS when resuming: complete login, open
+  `platform.cgi?page=lanIPv4Config.html`, dump the form's real submit JS
+  (Save button handler + POST fields), apply DNSServers=`Use Below`,
+  Primary=`192.168.29.191`, Secondary empty; verify immediately with
+  `dig @192.168.29.1 doubleclick.net` → expect `0.0.0.0`. If UI keeps
+  reverting, fall back to per-device DNS or DHCP takeover redesign.
+
 Router admin: `http://192.168.29.1/platform.cgi`
-- Login: user `admin` / pass stored locally (not in repo).
 - Firmware `SRCMTF1_JCOW404_R3.16`; LAN `192.168.29.1`, DHCP on
-  (192.168.29.2–.254, 24h). WAN IP at check time `10.85.8.242` (DHCP).
+  (192.168.29.2–.254, 24h).
 - NOTE: router pages never fire a full `load` event → browser "wait for load"
   / click timeout quirks. Use `gotoLinks('page.html')` via JS or eval, then
   wait ~2–3s. Page URL pattern: `platform.cgi?page=<page>.html`.
 - **Settings exist** under `NETWORK → LAN → LAN IPv4 Configuration`
   (`lanIPv4Config.html`):
   1. **Change DNS — YES**: `DNSServers` select: `Use DNS Proxy` (current,
-     hands out router itself + proxies) / `Use DNS from ISP` / `Use Below`
-     (enables Primary + Secondary DNS fields).
+      hands out router itself + proxies) / `Use DNS from ISP` / `Use Below`
+      (enables Primary + Secondary DNS fields).
   2. **Disable DHCP — YES** (`dhcpMode`: `DHCP Server` / `None`) — NOT needed
-     for the current plan (AdBlocker has no DHCP server).
+      for the current plan (AdBlocker has no DHCP server).
 - For this project the setup is: set `DNSServers → Use Below` with **Primary
   DNS = ESP static IP** (device stays on router's network; router proxies DNS
   to the ESP → whole network filtered).
@@ -166,15 +202,23 @@ coredump, data, coredump,0xFF0000,0x10000,
 - [x] Base project decided: s60sc/ESP32_AdBlocker (active, tested on
       ESP32-S3 + W5500 — matches planned hardware)
 - [x] Enforcement model decided: router DNS → ESP static IP (Use Below)
-- [x] Hardware decided & **ordered**: ESP32-S3-N16R8 + W5500 + breadboard kit
-      (₹1,100, order placed)
-- [x] Cloned s60sc/ESP32_AdBlocker; verified build config for ESP32-S3 N16R8
-      (see "Build config (verified)" section) — actual compile not yet run
-- [ ] Install arduino-cli + ESP32 core 3.1.1 and compile-verify the sketch
-- [ ] When kit arrives: wire W5500 → S3 per pin map; configure pins in
-      Edit Config → Ethernet
-- [ ] Validate on Jio Centrum: set router DNS `Use Below` = ESP static IP
-- [ ] Confirm DNS binding works over W5500 (AsyncUDP on port 53)
-- [ ] Sketch firmware partition/flash/build changes (OTA + blocklist coexist)
+- [x] Hardware ordered: ESP32-S3-N16R8 + breadboard kit (₹1,100)
+- [x] ESP32-S3 received & connected — working (2026-08-24)
+- [x] arduino-cli 1.5.1 + esp32 core 3.3.11 installed; partitions.csv created
+- [x] **DEPLOYED on WiFi (2026-08-24)**: flashed v3.3, joined HomeAlone5 at
+      **192.168.29.191** (ESP32_AdBlocker.local), default StevenBlack blocklist,
+      daily reload 04:00, web UI verified from LAN. WiFi creds were pushed
+      programmatically via `/control?ST_SSID=..&ST_Pass=..&save=1&reset=1`
+      (responses are empty 200s by design). NOTE: full blocklist re-downloads +
+      reprocesses (~4 min) after every boot.
+- [ ] ENC28J60 unusable (no driver in ESP-IDF/arduino): get W5500
+      replacement/reorder; run WiFi-only until then
+- [ ] Set Jio router DNS `Use Below` = 192.168.29.191 → network-wide blocking;
+      give device a DHCP reservation for that IP
+- [ ] Host creator-managed blacklist file (GitHub) + set device blocklist URL
+- [ ] Host creator-managed blacklist file (GitHub) + set device blocklist URL
+- [ ] Validate whitelist flow: DelDomain from dashboard survives daily reload
+- [ ] Install arduino-cli / Arduino IDE + ESP32 core 3.1.1 and compile-verify
+- [ ] Validate on Jio Centrum: router DNS `Use Below` = ESP static IP
 - [ ] Define backend (signed firmware + blocklist manifests)
 - [ ] Productize: status LED, reset button, enclosure, PSU

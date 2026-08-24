@@ -52,13 +52,16 @@ char AP_ip[MAX_IP_LEN]  = ""; // Leave blank to use 192.168.4.1
 char AP_sn[MAX_IP_LEN]  = "";
 char AP_gw[MAX_IP_LEN]  = "";
 
+// SPI Ethernet PHY type: W5500 (production). NOTE: ENC28J60 is NOT supported
+// by ESP-IDF / arduino-esp32 (only DM9051, W5500, KSZ8851SNL) — do not ship it.
+#define ETH_SPI_PHY_TYPE ETH_PHY_W5500
 // SPI pins for Ethernet
-int ethCS = -1; // W5500 chip select / LAN8720 MDC
-int ethInt = -1; // W5500 interrupt / LAN8720 MDIO
-int ethRst = -1; // W5500 reset / LAN8720 POWER
-int ethSclk = -1; // W5500 SPI clock / LAN8720 CLOCK
-int ethMiso = -1; // W5500 SPI data pin
-int ethMosi = -1; // W5500 SPI data pin
+int ethCS = -1; // SPI ethernet chip select / LAN8720 MDC
+int ethInt = -1; // SPI ethernet interrupt / LAN8720 MDIO
+int ethRst = -1; // SPI ethernet reset / LAN8720 POWER
+int ethSclk = -1; // SPI ethernet clock / LAN8720 CLOCK
+int ethMiso = -1; // SPI ethernet data in
+int ethMosi = -1; // SPI ethernet data out
 
 // basic HTTP Authentication access to web page
 char Auth_Name[MAX_HOST_LEN] = ""; 
@@ -249,7 +252,7 @@ static bool startEth(bool firstcall) {
       while (millis() < phySettle) yield();
     }
 #if CONFIG_IDF_TARGET_ESP32S3
-    if (!ETH.begin(ETH_PHY_W5500,
+    if (!ETH.begin(ETH_SPI_PHY_TYPE,
                    ETH_PHY_ADDR_AUTO,
                    ethCS,
                    ethInt,
@@ -258,8 +261,8 @@ static bool startEth(bool firstcall) {
                    ethSclk,
                    ethMiso,
                    ethMosi,
-                   ETH_PHY_SPI_FREQ_MHZ)) { 
-      LOG_WRN("Ethernet W5500 init failed");
+                   ETH_PHY_SPI_FREQ_MHZ)) {
+      LOG_WRN("Ethernet SPI PHY init failed");
       return false;
     }
 #endif
