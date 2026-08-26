@@ -486,3 +486,11 @@ coredump, data, coredump,0xFF0000,0x10000,
 - **JS Minification**: `common.js` was minified from ~52KB to ~24KB using `uglify-js` to optimize footprint.
 - **Controls**: Custom slider switches were reverted back to native HTML checkboxes via minimal CSS rules (`display: none` on tracks, `display: inline-block` on native inputs).
 - **Motivation**: Aiming for extreme reliability, fast loading times, and a footprint typical of embedded router web interfaces, matching the product goal of an "install and forget" utility device.
+
+## Session Notes: UI Polish & Git Cleanup (2026-08-26)
+- **Git Cleanup**: Merged `feature/network-mode-selector` and `refactor/external-css` into `main`. Cleaned up branches locally and remotely.
+- **UI Theme**: Completely stripped the UI of the old app-like styling. `style.css` is now a strict black-and-white, high-contrast, zero-bloat minimalist theme (no rounded corners, no gradients).
+- **JavaScript Dead-Code Elimination**: Analyzed `common.js` and removed thousands of lines of unused library bloat (Hub image rendering, Audio Worklets for mic/speaker, SSE, Heartbeats). Minified the remainder with `uglify-js`, bringing the file down from 52KB to 15KB.
+- **Dashboard Performance Improvements**: Patched `AdBlocker.htm` to fix a race condition during dynamic script loading (`common.js`), added a DOM cache to prevent unnecessary re-queries during the polling loop, and relaxed the polling interval from 4s to 10s to alleviate stress on the ESP32's LwIP network stack.
+- **Architecture Artifact**: Created `ui_architecture_review.md` artifact detailing future steps for decoupling the UI from backend config structures and moving away from full-JSON HTTP polling toward a WebSockets push model.
+- **Pending Action**: Changes were pushed to GitHub, but still need to be pushed to the physical ESP32 via WebDAV (`curl -T data/<file> http://<ip>/webdav/data/<file>`) and viewed in an Incognito window due to the ETag cache bug.
