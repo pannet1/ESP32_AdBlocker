@@ -157,10 +157,9 @@ Tasks:       setup · loop · DNS server · web/OTA server
       function processStatus(dest, key, value, fromUser = true) {
         // process change to status value
         if (dest == ID) {
-          // confirm before destructive actions
-          if (key == "reset" || key == "deldata" || key == "clear") {
+          // confirm only before destructive actions; reboot (reset) is non-destructive → no prompt
+          if (key == "deldata" || key == "clear") {
             const warn = {
-              reset:   "Reboot the device? It will go offline for a few seconds.",
               deldata: "Factory reset? This wipes ALL /data (web UI, blocklist, config) and reboots. This cannot be undone.",
               clear:   "Clear NVS? This erases saved preferences. This cannot be undone."
             }[key];
@@ -176,7 +175,7 @@ Tasks:       setup · loop · DNS server · web/OTA server
           else if (key == "clearLog") clearLog();
           else if (key == "saveLog") saveLog();
           else if (key == "refreshLog") getLog();
-          else if (key == "reset") saveChanges();
+          else if (key == "reset") sendControl("reset", "User requested reboot"); // immediate, non-destructive
           else if (key == "refreshVal") refreshInterval = value * 1000;
           else if (key == "clockUTC") { appClock = value; checkTime(value); }
           else if (key == "settings") getConfig("01");
