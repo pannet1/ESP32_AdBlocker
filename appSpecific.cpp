@@ -500,6 +500,7 @@ void appSetup() {
   // arch-review #1: start periodic minimal dashboard status push over WebSocket (5s).
   // wsAsyncSendJson() no-ops when no browser is connected, so this is cheap when idle.
   dashTicker.attach(5, sendWsDashStatus);
+  LOG_INF("dashTicker started (5s dashboard WS push)");
 }
 
 /************************ webServer callbacks *************************/
@@ -640,7 +641,9 @@ void sendWsDashStatus() {
   snprintf(dashJson, sizeof(dashJson),
     "\"dash_uptime\":\"%s\",\"dash_mode\":\"%s\",\"dash_ip\":\"%s\",\"dash_extip\":\"%s\",\"dash_rssi\":\"%i dBm\",\"dash_host\":\"%s\",\"abToggle\":\"%d\"",
     timeBuff, modeLabel, formatIPstr(), extIP, rssi, hostName, adBlockOn ? 1 : 0);
-  wsAsyncSendJson("dash", dashJson);
+  bool ok = wsAsyncSendJson("dash", dashJson);
+  static uint32_t dc = 0;
+  if (++dc <= 3 || dc % 60 == 0) LOG_INF("dash push #%u wsOk=%d", dc, ok);
 }
 
 void OTAprereq() {
