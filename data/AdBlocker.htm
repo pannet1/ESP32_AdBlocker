@@ -318,6 +318,19 @@
         // Legacy getConfig('012') targeted a removed #Main012 div (no #Cfg fallback) and crashed buildTable.
       }
 
+      // Switch dashboard tabs. Must be GLOBAL: common.js setListeners() calls openTab(e) on every
+      // tablink click. Hide all panels, then show the one whose id matches the clicked tab's name.
+      function openTab(evt) {
+        var name = evt.getAttribute('name');
+        if (!name) return;
+        document.querySelectorAll('.tabcontent').forEach(function (p) { p.style.display = 'none'; });
+        document.querySelectorAll('.tablinks').forEach(function (b) { b.classList.remove('active'); });
+        var panel = document.getElementById(name);
+        if (panel) panel.style.display = 'block';
+        evt.classList.add('active');
+        if (name === 'ShowLog' && typeof getLog === 'function') getLog();
+      }
+
       /**************************************************/
 
       // common script config
