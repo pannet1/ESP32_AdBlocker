@@ -5,6 +5,7 @@
 #include "appGlobals.h"
 #include <Ticker.h>  // arch-review #1: periodic dashboard status push over WebSocket
 static Ticker dashTicker;
+void sendWsDashStatus();  // forward decl — defined later, used in appSetup()
 
 const size_t prvtkey_len = 0;
 const size_t cacert_len = 0;
