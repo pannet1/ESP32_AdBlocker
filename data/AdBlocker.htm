@@ -327,16 +327,16 @@
       const doCustomSync = false;
       const doHeartbeat = false;
       const doInitSSE = false;
+    </script>
 
-      <!-- Load common.js with defer: it parses before DOMContentLoaded, so initialise() is
-           always defined when called — no dynamic-injection load race (arch-review #2) -->
-      <script defer src="/web?common.js"></script>
-      <script defer>
-        document.addEventListener('DOMContentLoaded', function () {
-          if (typeof initialise === 'function') initialise();
-          if (typeof getConfig === 'function') getConfig('012');
-        });
-      </script>
+    <!-- Load common.js with defer: parses before DOMContentLoaded, so initialise() is
+         always defined when called — no dynamic-injection load race (arch-review #2) -->
+    <script defer src="/web?common.js"></script>
+    <script defer>
+      document.addEventListener('DOMContentLoaded', function () {
+        if (typeof initialise === 'function') initialise();
+        if (typeof getConfig === 'function') getConfig('012');
+      });
     </script>
 
     <!-- ============ curated dashboard logic ============ -->
