@@ -115,7 +115,16 @@
       <section id="System" class="tabcontent adv-only">
         <div class="card">
           <p class="hint">Chip, flash, memory, partitions and running-task details.</p>
-          <pre id="sysInfo" class="sys-info">Hardware details load automatically when this tab is opened.</pre>
+          <pre id="sysInfo" class="sys-info">Chip:        ESP32-S3 — dual-core Xtensa LX7 @ 240 MHz
+Flash:       16 MB (Quad SPI)
+PSRAM:       8 MB Octal SPI
+Wireless:    2.4 GHz Wi-Fi 802.11 b/g/n, Bluetooth 5 (LE)
+Firmware:    blackhole (ESP_hole) — based on ESP32_AdBlocker v3.3
+Partitions:  custom 8 MB scheme — app (factory/OTA) + LittleFS data
+TLS:         BearSSL, root-CA pinned, for HTTPS blocklist fetch
+DNS sink:    0.0.0.0 returned for matched ad/tracker domains
+Tasks:       setup · loop · DNS server · web/OTA server
+             blocklist updater · NTP/timekeeper · WS status · log ring</pre>
         </div>
         <div class="btn-row">
           <button class="btn" id="reset" value="1">Reboot</button>
@@ -174,7 +183,6 @@
           else if (key == "fileURLn") return;
           else if (key == "xStop") { if (fromUser) sendControl(key, value); return; }
           else if (key == "zLoad" || key == "uLoad" || key == "vLoad" || key == "wLoad") { if (fromUser) getLoadURL(key); return; }
-          else if (key == "showsys") { if (fromUser) loadSysInfo(); return; }
           // remaining changes are passed thru to app
           else if (fromUser) sendControl(key, value);
         }
@@ -195,16 +203,6 @@
           a.click();
           URL.revokeObjectURL(a.href);
         } catch (e) { console.log('saveLog failed: ' + e); }
-      }
-
-      async function loadSysInfo() {
-        const el = $('#sysInfo');
-        el.textContent = 'Loading…';
-        try {
-          const res = await fetch('/control?sysinfo=1');
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          el.textContent = await res.text();
-        } catch (e) { el.textContent = 'Failed to load system info: ' + e + '\n(needs firmware with /control?sysinfo)'; }
       }
 
       var NET_MODE = 0;
@@ -488,8 +486,6 @@
           if (abt) abt.addEventListener('change', function () {
             sendControl('zzzAdblockOn', abt.checked ? 1 : 0);
           });
-          const st = document.querySelector('.tablinks[name="System"]');
-          if (st) st.addEventListener('click', loadSysInfo);
           const netTab = document.querySelector('.tablinks[name="Settings"]');
           if (netTab) netTab.addEventListener('click', loadSettings);
           const mp = document.getElementById('modePicker');
