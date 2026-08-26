@@ -481,3 +481,8 @@ coredump, data, coredump,0xFF0000,0x10000,
   hidden via `body:not(.advanced) .adv-only`). Removed the permanent Quick Block/Check buttons and the
   framework `Main012` injection from the Dashboard. Pure LittleFS (WebDAV), no firmware change.
   Caveat: no login, so Advanced is a UI filter, not access control (advanced URLs still reachable).
+## Web UI (dashboard) — Minimalist Router-Style Refactor (2026-08-26)
+- **Compactness over aesthetics**: The previously curated "app-like" CSS was entirely replaced with a barebones, traditional router-style CSS layout. This reduces file size significantly and avoids complex styling (gradients, rounded corners, custom switches).
+- **JS Minification**: `common.js` was minified from ~52KB to ~24KB using `uglify-js` to optimize footprint.
+- **Controls**: Custom slider switches were reverted back to native HTML checkboxes via minimal CSS rules (`display: none` on tracks, `display: inline-block` on native inputs).
+- **Motivation**: Aiming for extreme reliability, fast loading times, and a footprint typical of embedded router web interfaces, matching the product goal of an "install and forget" utility device.
