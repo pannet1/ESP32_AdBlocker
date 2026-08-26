@@ -97,12 +97,14 @@
         <p class="hint">Choose how blackhole connects, then fill in only the settings shown for that mode. Press <b>Save</b> to apply — the device restarts.</p>
         <div class="net-mode">
           <label for="modePicker" class="mode-label">Connection mode</label>
-          <select id="modePicker" class="selectField">
-            <option value="0">WiFi station (joins your router's Wi‑Fi)</option>
-            <option value="1">Ethernet (wired to your router)</option>
-            <option value="2">Ethernet + Access Point (wired + own Wi‑Fi)</option>
-          </select>
-          <p class="hint">WiFi: device connects to your router over Wi‑Fi. Ethernet: plug into the router with a cable. Ethernet+AP: wired upstream and the device also broadcasts its own Wi‑Fi network.</p>
+          <div class="net-value">
+            <select id="modePicker" class="selectField">
+              <option value="0">WiFi station (joins your router's Wi‑Fi)</option>
+              <option value="1">Ethernet (wired to your router)</option>
+              <option value="2">Ethernet + Access Point (wired + own Wi‑Fi)</option>
+            </select>
+            <p class="hint">WiFi: device connects to your router over Wi‑Fi. Ethernet: plug into the router with a cable. Ethernet+AP: wired upstream and the device also broadcasts its own Wi‑Fi network.</p>
+          </div>
         </div>
         <h3 class="net-sub hidden" id="hd0123">Ethernet</h3>
         <div class="config-group" id="Main0123"></div>
