@@ -430,12 +430,24 @@ coredump, data, coredump,0xFF0000,0x10000,
   served instantly (no cache, no hard-refresh needed). Immediate test before flashing: open
   the dashboard in a private/incognito window (it has no cached ETag) → current served file
   already has the fix.
-- **Network tab (2026-08-26):** firmware exposes exactly two network config groups — group `0`
-  = Wireless (WiFi station `ST_*` + AP `AP_*` + `hostName` + `allowAP`) and group `0123` =
-  Ethernet pins + `netMode` (0=WiFi/1=Ethernet/2=Eth+AP). UI maps them to two buttons in the
-  Network tab: **Wireless** (`id="wifi"`→`getConfig("0")`) and **Ethernet** (`id="ethernet"`→
-  `getConfig("0123")`), filling `#Main0`/`#Main0123`. There is NO standalone "AP" group (AP
-  only exists inside group `0` and as part of `netMode 2`).
+- **Network tab (2026-08-26, updated mode-driven):** mode selector at TOP drives which settings
+  show. `netMode` (0=WiFi/1=Ethernet/2=Eth+AP) lives in group `0123` (selector always visible
+  there); group `0` holds `ST_*`+`hostName`+`wifiTimeoutSecs` (station), `AP_*`+`allowAP` (AP),
+  and `useHttps`/`Auth_*`/`usePing` (web access). `loadNetwork()` calls `getConfig('0123')` +
+  `getConfig('0')`, then `applyNetModeFromUI()` toggles ROWS by config key (`setRowVisibility`
+  hides the `<tr>` of the input id): WiFi→show ST rows; Ethernet→hide group-0 entirely;
+  Eth+AP→show AP rows. `Save & Reboot` button (`id="netsave"`) → `saveChanges()` (persists +
+  reboots, required because `netMode` only applies after restart). netMode change wired via a
+  `document` change listener (`e.target.id === 'netMode'`).
+- **CRITICAL: config *structure* (incl. group index) is persisted in `/data/config`, NOT taken
+  from the compiled `appConfig` every boot.** Evidence: after flashing firmware that reindexed
+  config keys (moved `netMode`→index 4, `ST_*`→5, etc.), `getConfig` STILL returned the OLD
+  grouping (group `01` did NOT contain the keys moved to index 1). So **changing the config-vector
+  index in `appSpecific.cpp` does NOT regroup the UI on a device with an existing `/data/config`** —
+  it only takes effect after a factory reset (or deleting `/data/config` so it rebuilds from
+  `appConfig`). LESSON: prefer UI-only changes (row-hiding by key) over firmware config reindexing
+  unless a factory reset is acceptable. To ACTIVATE a reindex, factory-reset (wipes web UI +
+  blocklist cache + config; re-upload `AdBlocker.htm` via WebDAV, let blocklist re-download).
 - **Danger-button confirm (2026-08-26):** System tab's Reboot/Factory reset/Clear NVS buttons
   (`id=reset`/`deldata`/`clear`) trigger a native `confirm()` in `processStatus` before acting.
   The "Control" subtitle + its verbose hint were removed from the System tab (the buttons stay).

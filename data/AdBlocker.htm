@@ -296,15 +296,11 @@
 
       <!-- ===================== NETWORK (advanced) ===================== -->
       <section id="Network" class="tabcontent adv-only">
-        <p class="hint">Configure the wireless interface (WiFi station + AP) and Ethernet. Pick an option, edit the fields, then press Save to apply.</p>
-        <div class="btn-row">
-          <button class="btn" id="wifi" value="1">Wireless</button>
-          <button class="btn" id="ethernet" value="1">Ethernet</button>
-        </div>
-        <div class="config-group" id="Main0"></div>
+        <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save &amp; Reboot</b> to apply — the device restarts.</p>
         <div class="config-group" id="Main0123"></div>
+        <div class="config-group" id="Main0"></div>
         <div class="btn-row" style="margin-top:16px;">
-          <button class="btn btn-primary net-save" id="save" value="1" style="display:none;">Save</button>
+          <button class="btn btn-primary net-save" id="netsave" value="1">Save &amp; Reboot</button>
         </div>
       </section>
 
@@ -354,9 +350,9 @@
             }[key];
             if (!confirm(warn)) return;
           }
+          else if (key == "netsave") saveChanges("Network settings applied — device rebooting");
           // operation based on ID
-          if (key == "wifi") { ['Main0','Main0123'].forEach(id => { const e = $('#'+id); if (e) e.style.display = (id=='Main0') ? '' : 'none'; }); getConfig("0"); }
-          else if (key == "hostName") {
+          if (key == "hostName") {
             document.title = value;
             if (fromUser) sendControl(key, value);
           }
@@ -367,7 +363,6 @@
           else if (key == "refreshVal") refreshInterval = value * 1000;
           else if (key == "clockUTC") { appClock = value; checkTime(value); }
           else if (key == "settings") getConfig("01");
-          else if (key == "ethernet") { ['Main0','Main0123'].forEach(id => { const e = $('#'+id); if (e) e.style.display = (id=='Main0123') ? '' : 'none'; }); getConfig("0123"); }
           else if (key == "fileURLn") return;
           else if (key == "xStop") { if (fromUser) sendControl(key, value); return; }
           else if (key == "zLoad" || key == "uLoad" || key == "vLoad" || key == "wLoad") { if (fromUser) getLoadURL(key); return; }
@@ -402,6 +397,44 @@
           if (!res.ok) throw new Error('HTTP ' + res.status);
           el.textContent = await res.text();
         } catch (e) { el.textContent = 'Failed to load system info: ' + e + '\n(needs firmware with /control?sysinfo)'; }
+      }
+
+      function loadNetwork() {
+        getConfig('0123');   // netMode selector + Ethernet
+        getConfig('0');      // WiFi station + AP + web access
+        let tries = 0;
+        (function wait() {
+          tries++;
+          if (document.getElementById('netMode') || tries > 30) { applyNetModeFromUI(); return; }
+          setTimeout(wait, 100);
+        })();
+      }
+      function setRowVisibility(keys, visible) {
+        keys.forEach(function (k) {
+          const inp = document.getElementById(k);
+          if (inp) { const tr = inp.closest('tr'); if (tr) tr.style.display = visible ? '' : 'none'; }
+        });
+      }
+      function applyNetModeFromUI() {
+        const sel = document.getElementById('netMode');
+        const mode = sel ? (parseInt(sel.value, 10) || 0) : 0;
+        const ethKeys = ['ethCS','ethInt','ethRst','ethSclk','ethMiso','ethMosi'];
+        const staKeys = ['ST_SSID','ST_Pass','ST_ip','ST_gw','ST_sn','ST_ns1','ST_ns2','hostName','wifiTimeoutSecs'];
+        const apKeys  = ['AP_Pass','AP_ip','AP_sn','AP_gw','allowAP'];
+        // netMode + Ethernet group always visible; toggle just the Ethernet rows
+        setRowVisibility(ethKeys, (mode === 1 || mode === 2));
+        // Wireless/AP group always visible; toggle ST vs AP rows
+        if (mode === 0) {            // WiFi station
+          setRowVisibility(staKeys, true);
+          setRowVisibility(apKeys, false);
+        } else if (mode === 1) {     // Ethernet
+          setRowVisibility(staKeys, false);
+          setRowVisibility(apKeys, false);
+        } else {                     // Ethernet + AP
+          setRowVisibility(staKeys, false);
+          setRowVisibility(apKeys, true);
+        }
+        // useHttps / Auth_* / usePing stay visible (web access settings)
       }
 
       function getLoadURL(key) {
@@ -562,9 +595,10 @@
           if (st) st.addEventListener('click', loadSysInfo);
           const setTab = document.querySelector('.tablinks[name="EditConfig"]');
           if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } });
-          ['wifi','ethernet'].forEach(function (id) {
-            const b = document.getElementById(id);
-            if (b) b.addEventListener('click', function () { const s = document.querySelector('.net-save'); if (s) s.style.display = ''; });
+          const netTab = document.querySelector('.tablinks[name="Network"]');
+          if (netTab) netTab.addEventListener('click', loadNetwork);
+          document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'netMode') applyNetModeFromUI();
           });
         });
       })();
