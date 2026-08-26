@@ -327,14 +327,14 @@
       const doHeartbeat = false;
       const doInitSSE = false;
 
+      // Dynamically load common.js and initialize safely
       const scriptElement = document.createElement('script');
       scriptElement.src = (window.location.protocol === "file:") ? '../../CommonMaster/common.js' : '/web?common.js';
-      document.body.appendChild(scriptElement);
-
-      window.addEventListener('load', function() {
+      scriptElement.onload = function() {
         initialise();
         getConfig('012');
-      });
+      };
+      document.body.appendChild(scriptElement);
     </script>
 
     <!-- ============ curated dashboard logic ============ -->
@@ -345,19 +345,28 @@
         function sendC(key, val) {
           fetch('/control?' + key + '=' + encodeURIComponent(val)).catch(() => {});
         }
+        const uiCache = {};
         async function dash() {
           try {
             const r = await fetch('/status');
             const d = await r.json();
-            if ($('dash_uptime')) $('dash_uptime').textContent = d.up_time || '—';
-            if ($('dash_mode')) $('dash_mode').textContent = modeLabels[d.netMode] || ('Mode ' + d.netMode) || '—';
-            if ($('dash_ip')) $('dash_ip').textContent = d.ip || '—';
-            if ($('dash_extip')) $('dash_extip').textContent = d.extIP || '—';
-            if ($('dash_rssi')) $('dash_rssi').textContent = d.wifi_rssi || '—';
-            if ($('dash_host')) $('dash_host').textContent = d.hostName || 'ESP_hole';
+            if (!uiCache.up) uiCache.up = $('dash_uptime');
+            if (!uiCache.mode) uiCache.mode = $('dash_mode');
+            if (!uiCache.ip) uiCache.ip = $('dash_ip');
+            if (!uiCache.ext) uiCache.ext = $('dash_extip');
+            if (!uiCache.rssi) uiCache.rssi = $('dash_rssi');
+            if (!uiCache.host) uiCache.host = $('dash_host');
+            if (!uiCache.ab) uiCache.ab = $('abToggle');
+
+            if (uiCache.up) uiCache.up.textContent = d.up_time || '—';
+            if (uiCache.mode) uiCache.mode.textContent = modeLabels[d.netMode] || ('Mode ' + d.netMode) || '—';
+            if (uiCache.ip) uiCache.ip.textContent = d.ip || '—';
+            if (uiCache.ext) uiCache.ext.textContent = d.extIP || '—';
+            if (uiCache.rssi) uiCache.rssi.textContent = d.wifi_rssi || '—';
+            if (uiCache.host) uiCache.host.textContent = d.hostName || 'ESP_hole';
+            
             const on = (d.zzzAdblockOn === '1' || d.zzzAdblockOn === 1);
-            const ab = $('abToggle');
-            if (ab) ab.checked = !!on;
+            if (uiCache.ab) uiCache.ab.checked = !!on;
           } catch (e) { /* offline */ }
         }
         function otaUploadDashboard() {
@@ -449,7 +458,7 @@
         window.addEventListener('DOMContentLoaded', function () {
           dash();
           buildTzPicker();
-          setInterval(dash, 4000);
+          setInterval(dash, 10000);
           const fi = $('otaFile'); if (fi) fi.onchange = otaUploadDashboard;
           const cb = $('chkBtn'); if (cb) cb.onclick = checkDomainUI;
           const cd = $('chkDomain'); if (cd) cd.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkDomainUI(); });
