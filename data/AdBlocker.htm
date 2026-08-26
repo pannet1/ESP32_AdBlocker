@@ -52,6 +52,8 @@
       }
       .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
       .logo { font-size: 22px; }
+      .brand-name { color: inherit; text-decoration: none; cursor: pointer; }
+      .brand-name:hover { text-decoration: underline; opacity: .85; }
       .status { display: flex; align-items: center; }
       .pill {
         display: inline-flex; align-items: center; gap: 7px;
@@ -218,7 +220,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="logo">🛡️</span>
-        <span class="brand-name" id="dash_host">ESP_hole</span>
+        <a class="brand-name" id="dash_host" href="/">ESP_hole</a>
       </div>
       <div class="status">
         <label class="ab-switch" title="Enable or pause ad blocking">
@@ -662,6 +664,12 @@
           const cb = $('chkBtn'); if (cb) cb.onclick = checkDomainUI;
           const cd = $('chkDomain'); if (cd) cd.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkDomainUI(); });
           initAdv();
+          const brand = document.getElementById('dash_host');
+          if (brand) brand.addEventListener('click', function (e) {
+            e.preventDefault();
+            const t = document.querySelector('.tablinks[name="AdBlocker"]');
+            if (t) t.click();
+          });
           const abt = $('abToggle');
           if (abt) abt.addEventListener('change', function () {
             sendControl('zzzAdblockOn', abt.checked ? 1 : 0);
