@@ -7,213 +7,8 @@
     <title>ESP_hole</title>
     <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🛡️</text></svg>'>
 
-    <style>
-      :root {
-        --bg: #eef2f7;
-        --card: #ffffff;
-        --text: #0f172a;
-        --muted: #64748b;
-        --border: #e2e8f0;
-        --accent: #0f766e;
-        --accent-600: #0d9488;
-        --accent-700: #115e59;
-        --on: #10b981;
-        --on-bg: #ecfdf5;
-        --off: #f59e0b;
-        --off-bg: #fffbeb;
-        --warn: #ef4444;
-        --radius: 14px;
-        --shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
-        --shadow-lg: 0 10px 30px rgba(15,23,42,.10);
-        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
-      }
+        <link rel="stylesheet" href="/web?AdBlocker.css">
 
-      * { box-sizing: border-box; }
-      html, body { margin: 0; padding: 0; }
-      body {
-        font-family: var(--font);
-        background: var(--bg);
-        color: var(--text);
-        font-size: 15px;
-        line-height: 1.5;
-        -webkit-text-size-adjust: 100%;
-      }
-
-      .hidden { display: none; }
-
-      /* ---- top bar ---- */
-      .topbar {
-        position: sticky; top: 0; z-index: 30;
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 12px 18px;
-        background: linear-gradient(120deg, var(--accent-700), var(--accent));
-        color: #fff; box-shadow: var(--shadow);
-      }
-      .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
-      .logo { font-size: 22px; }
-      .brand-name { color: inherit; text-decoration: none; cursor: pointer; }
-      .brand-name:hover { text-decoration: underline; opacity: .85; }
-      .status { display: flex; align-items: center; }
-      .pill {
-        display: inline-flex; align-items: center; gap: 7px;
-        padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
-      }
-      .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-      .pill-on { background: var(--on-bg); color: #047857; border: 1px solid #a7f3d0; }
-      .pill-off { background: var(--off-bg); color: #b45309; border: 1px solid #fde68a; }
-      .adv-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; cursor: pointer; }
-      .adv-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.88); }
-      .ab-switch { position: relative; display: inline-block; width: 82px; height: 32px; cursor: pointer; }
-      .ab-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
-      .ab-track { position: absolute; inset: 0; border-radius: 999px; background: #c7ccd1; transition: background .2s ease; }
-      .ab-switch input:checked + .ab-track { background: #34c759; }
-      .ab-on, .ab-off { position: absolute; top: 0; height: 32px; display: flex; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: .3px; color: #fff; transition: opacity .2s ease; }
-      .ab-on { left: 11px; opacity: 0; }
-      .ab-off { right: 9px; opacity: 1; }
-      .ab-switch input:checked + .ab-track .ab-on { opacity: 1; }
-      .ab-switch input:checked + .ab-track .ab-off { opacity: 0; }
-      .ab-knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s ease; }
-      .ab-switch input:checked + .ab-track .ab-knob { transform: translateX(50px); }
-
-      /* ---- tabs ---- */
-      .tabs {
-        position: sticky; top: 57px; z-index: 20;
-        display: flex; gap: 2px; background: #fff;
-        border-bottom: 1px solid var(--border); padding: 0 10px; overflow-x: auto;
-      }
-      .tablinks {
-        appearance: none; border: 0; background: transparent; color: var(--muted);
-        font: inherit; font-weight: 600; padding: 14px 16px; cursor: pointer;
-        position: relative; white-space: nowrap;
-      }
-      .tablinks:hover { color: var(--text); }
-      .tablinks.active { color: var(--accent-700); }
-      .tablinks.active::after {
-        content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px;
-        height: 3px; border-radius: 3px 3px 0 0; background: var(--accent);
-      }
-      .tabcontent { display: none; padding: 18px; max-width: 1100px; margin: 0 auto; }
-
-      /* advanced-only elements hidden unless Advanced mode is on */
-      body:not(.advanced) .adv-only { display: none !important; }
-
-      /* ---- dashboard ---- */
-      .dash {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 14px; margin-bottom: 22px;
-      }
-      .card {
-        background: var(--card); border: 1px solid var(--border);
-        border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
-      }
-      .stat-label {
-        font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
-        color: var(--muted); font-weight: 600;
-      }
-      .stat-value { font-size: 18px; font-weight: 700; margin-top: 4px; word-break: break-word; }
-      .card-title { font-weight: 700; margin-bottom: 10px; }
-      .sys-info { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.5; background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 10px; max-height: 60vh; overflow: auto; margin: 0; }
-      .filebtn { display: inline-block; padding: 12px 18px; border: 2px dashed var(--border); border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600; color: var(--accent-700); }
-      .filebtn:hover { background: #f1f5f9; }
-      .ota-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; }
-      .ota-card .filebtn { margin: 0; }
-      .ota-card .progress { width: 100%; margin: 6px 0 0; }
-      input[type=file] { display: none; }
-      .progress { width: 100%; height: 10px; border-radius: 999px; overflow: hidden; background: #e2e8f0; margin: 14px 0 6px; }
-      progress { width: 100%; height: 10px; border: 0; appearance: none; }
-      progress::-webkit-progress-bar { background: #e2e8f0; border-radius: 999px; }
-      progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
-      progress::-moz-progress-bar { background: var(--accent); }
-      .text-input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); }
-      .checker-row { display: flex; gap: 10px; margin: 6px 0 12px; }
-      .checker-row .text-input { flex: 1; }
-      .checker-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .btn-ghost { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
-      .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
-      .badge.blocked { background: #fee2e2; color: #b91c1c; }
-      .badge.allowed { background: #dcfce7; color: #15803d; }
-      .badge.notlisted { background: #e2e8f0; color: #475569; }
-      .badge.invalid { background: #fef3c7; color: #92400e; }
-
-      /* ---- buttons ---- */
-      .btn {
-        appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
-        padding: 10px 16px; border-radius: 10px; background: var(--accent); color: #fff;
-        transition: filter .15s, transform .05s;
-      }
-      .btn:hover { filter: brightness(1.06); }
-      .btn:active { transform: translateY(1px); }
-      .btn-block { background: #0f766e; }
-      .btn-ghost { background: #e2e8f0; color: #0f172a; }
-      .btn-warn { background: var(--warn); }
-      .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 16px; }
-      .log-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-      .ctl-label { font-weight: 600; color: var(--muted); }
-
-      /* ---- toggle switch (framework .switch) ---- */
-      .switch { position: relative; display: inline-block; width: 46px; height: 26px; vertical-align: middle; }
-      .switch input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
-      .switch .slider {
-        position: absolute; inset: 0; cursor: pointer;
-        background: #cbd5e1; border: 1px solid #94a3b8; border-radius: 999px;
-        transition: background .2s, border-color .2s;
-      }
-      .switch input[type="checkbox"]:checked + .slider { background: var(--accent); border-color: var(--accent-700); }
-      .switch .slider::before {
-        content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
-        background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(15,23,42,.25); transition: transform .2s;
-      }
-      .switch input[type="checkbox"]:checked + .slider::before { transform: translateX(20px); }
-
-      /* ---- config table (auto-generated) ---- */
-      .config-group table {
-        width: 100%; border-collapse: collapse; background: var(--card);
-        border: 1px solid var(--border); border-radius: var(--radius);
-        overflow: hidden; box-shadow: var(--shadow); margin-top: 6px;
-      }
-      .config-group th {
-        background: #f8fafc; text-align: left; padding: 10px 14px;
-        border-bottom: 1px solid var(--border); font-size: 13px;
-        text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
-      }
-      .config-group td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
-      .config-group tr:last-child td { border-bottom: 0; }
-      .net-sub { margin: 18px 0 6px; font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent-700); }
-      .config-group input[type=text], .config-group input[type=number] {
-        padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
-        font: inherit; min-width: 120px;
-      }
-      .action-btn {
-        appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
-        padding: 8px 14px; border-radius: 8px; background: var(--accent); color: #fff;
-      }
-      .action-btn:hover { filter: brightness(1.06); }
-
-      /* ---- log ---- */
-      .log {
-        height: 55vh; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);
-        background: #0f172a; color: #e2e8f0; font-family: var(--mono); font-size: 13px;
-        padding: 12px; overflow: auto; white-space: pre-wrap;
-      }
-
-      /* ---- misc ---- */
-      .alertMsg { position: fixed; left: 0; right: 0; bottom: 16px; text-align: center; z-index: 50; pointer-events: none; }
-      .alertMsg span {
-        display: none; background: #fff; border: 1px solid var(--warn); color: var(--warn);
-        padding: 8px 16px; border-radius: 10px; box-shadow: var(--shadow-lg); font-weight: 600;
-      }
-      .alertMsg span:not(:empty) { display: inline-block; }
-      .cfg-head { font-size: 16px; font-weight: 800; margin-top: 6px; }
-      .hint { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
-
-      @media (max-width: 640px) {
-        .topbar { padding: 10px 14px; }
-        .tabcontent { padding: 14px 12px; }
-        .dash { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-        .stat-value { font-size: 16px; }
-      }
-    </style>
   </head>
 
   <body>
@@ -235,12 +30,12 @@
     </header>
 
     <nav class="tabs">
-      <button class="tablinks active" name="AdBlocker" id="mainTab">Dashboard</button>
+      <button class="tablinks active hidden" name="AdBlocker" id="mainTab">Dashboard</button>
       <button class="tablinks adv-only" name="ShowLog">Logs</button>
       <button class="tablinks adv-only" name="EditConfig">Settings</button>
       <button class="tablinks adv-only" name="Network">Network</button>
       <button class="tablinks adv-only" name="System">System</button>
-      <label class="adv-toggle" title="Reveal logs, settings, network and system" style="margin-left:auto; align-self:center;">
+      <label class="adv-toggle" title="Reveal logs, settings, network and system">
         <span class="adv-label">Advanced</span>
         <span class="switch"><input type="checkbox" id="advToggle"><span class="slider"></span></span>
       </label>
@@ -248,9 +43,9 @@
 
     <main>
       <!-- ===================== DASHBOARD (normal user) ===================== -->
-      <section id="AdBlocker" class="tabcontent" style="display:block">
+      <section id="AdBlocker" class="tabcontent tab-home">
         <div class="dash">
-          <section class="card" style="grid-column: 1 / -1;">
+          <section class="card card-full">
             <div class="card-title">Your network is protected</div>
             <p class="hint">Ads, trackers and malware are being blocked for every device on your network.</p>
           </section>
@@ -262,7 +57,7 @@
           <div class="card stat"><div class="stat-label">WiFi signal</div><div class="stat-value" id="dash_rssi">—</div></div>
 
           <!-- The only thing a normal user does: block / unblock a site -->
-          <section class="card" style="grid-column: 1 / -1;">
+          <section class="card card-full">
             <div class="card-title">Block or unblock a website</div>
             <p class="hint">Type a website to see whether it is blocked. Then block or unblock it with one tap — changes apply instantly and survive updates.</p>
             <div class="checker-row">
@@ -292,12 +87,12 @@
       <section id="EditConfig" class="tabcontent adv-only">
         <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
         <div class="config-group" id="Main01"></div>
-        <div class="tz-wrap" style="margin-top:18px; display:flex; flex-direction:column; gap:6px; max-width:440px;">
-          <label for="tzPicker" style="font-size:0.9rem; font-weight:600;">Timezone &mdash; used for logs &amp; timestamps</label>
-          <select id="tzPicker" class="selectField" style="max-width:360px;"></select>
+        <div class="tz-wrap">
+          <label for="tzPicker" class="tz-label">Timezone &mdash; used for logs &amp; timestamps</label>
+          <select id="tzPicker" class="selectField"></select>
           <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
         </div>
-        <div class="btn-row" style="margin-top:16px;">
+        <div class="btn-row mt">
           <button class="btn btn-primary" id="save" value="1">Save</button>
         </div>
       </section>
@@ -305,20 +100,20 @@
       <!-- ===================== NETWORK (advanced) ===================== -->
       <section id="Network" class="tabcontent adv-only">
         <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save &amp; Reboot</b> to apply — the device restarts.</p>
-        <div class="net-mode" style="margin-bottom:14px;">
-          <label for="modePicker" style="font-weight:600; display:block; margin-bottom:6px;">Connection mode</label>
-          <select id="modePicker" class="selectField" style="max-width:360px;">
+        <div class="net-mode">
+          <label for="modePicker" class="mode-label">Connection mode</label>
+          <select id="modePicker" class="selectField">
             <option value="0">WiFi station (joins your router's Wi‑Fi)</option>
             <option value="1">Ethernet (wired to your router)</option>
             <option value="2">Ethernet + Access Point (wired + own Wi‑Fi)</option>
           </select>
           <p class="hint">WiFi: device connects to your router over Wi‑Fi. Ethernet: plug into the router with a cable. Ethernet+AP: wired upstream and the device also broadcasts its own Wi‑Fi network.</p>
         </div>
-        <h3 class="net-sub" id="hd0123" style="display:none;">Ethernet</h3>
+        <h3 class="net-sub hidden" id="hd0123">Ethernet</h3>
         <div class="config-group" id="Main0123"></div>
-        <h3 class="net-sub" id="hd0" style="display:none;"></h3>
+        <h3 class="net-sub hidden" id="hd0"></h3>
         <div class="config-group" id="Main0"></div>
-        <div class="btn-row" style="margin-top:16px;">
+        <div class="btn-row mt">
           <button class="btn btn-primary net-save" id="netsave" value="1">Save &amp; Reboot</button>
         </div>
       </section>
@@ -434,7 +229,7 @@
       function setRowVisibility(keys, visible) {
         keys.forEach(function (k) {
           const inp = document.getElementById(k);
-          if (inp) { const tr = inp.closest('tr'); if (tr) tr.style.display = visible ? '' : 'none'; }
+          if (inp) { const tr = inp.closest('tr'); if (tr) tr.classList.toggle('hidden', !visible); }
         });
       }
       function applyNetModeUI() {
@@ -446,22 +241,22 @@
         const apKeys  = ['AP_Pass','AP_ip','AP_sn','AP_gw','allowAP'];
         // hide the framework's own netMode row; the dedicated picker is the real control
         const nm = document.getElementById('netMode');
-        if (nm) { const tr = nm.closest('tr'); if (tr) tr.style.display = 'none'; }
+        if (nm) { const tr = nm.closest('tr'); if (tr) tr.classList.add('hidden'); }
         // Ethernet container only for ethernet modes (its netMode row is hidden anyway)
-        if (m0123) m0123.style.display = (mode === 1 || mode === 2) ? '' : 'none';
+        if (m0123) m0123.classList.toggle('hidden', !(mode === 1 || mode === 2));
         setRowVisibility(ethKeys, (mode === 1 || mode === 2));
         // Wireless/AP container only for WiFi / Eth+AP
-        if (m0) m0.style.display = (mode === 0 || mode === 2) ? '' : 'none';
+        if (m0) m0.classList.toggle('hidden', !(mode === 0 || mode === 2));
         setRowVisibility(staKeys, mode === 0);
         setRowVisibility(apKeys, mode === 2);
         // section sub-headings below the mode picker
         const hd0123 = document.getElementById('hd0123');
         const hd0 = document.getElementById('hd0');
-        if (hd0123) hd0123.style.display = (mode === 1 || mode === 2) ? '' : 'none';
+        if (hd0123) hd0123.classList.toggle('hidden', !(mode === 1 || mode === 2));
         if (hd0) {
-          if (mode === 0) { hd0.textContent = 'WiFi station'; hd0.style.display = ''; }
-          else if (mode === 2) { hd0.textContent = 'Access Point'; hd0.style.display = ''; }
-          else { hd0.style.display = 'none'; }
+          if (mode === 0) { hd0.textContent = 'WiFi station'; hd0.classList.remove('hidden'); }
+          else if (mode === 2) { hd0.textContent = 'Access Point'; hd0.classList.remove('hidden'); }
+          else { hd0.classList.add('hidden'); }
         }
         // useHttps / Auth_* / usePing stay visible inside #Main0 when shown
       }
@@ -498,8 +293,8 @@
         sel.addEventListener('change', function () {
           const inp = document.getElementById('timezone');
           const tr = inp ? inp.closest('tr') : null;
-          if (sel.value === '__custom__') { if (tr) tr.style.display = ''; }
-          else { setTz(sel.value); if (tr) tr.style.display = 'none'; }
+          if (sel.value === '__custom__') { if (tr) tr.classList.remove('hidden'); }
+          else { setTz(sel.value); if (tr) tr.classList.add('hidden'); }
         });
       }
       function syncTzPicker() {
@@ -511,7 +306,7 @@
         TZ_OPTIONS.forEach(function (o) { if (o[1] === cur) { sel.value = o[1]; found = true; } });
         if (!found) sel.value = '__custom__';
         const tr = inp ? inp.closest('tr') : null;
-        if (tr) tr.style.display = (sel.value === '__custom__') ? '' : 'none';
+        if (tr) tr.classList.toggle('hidden', sel.value !== '__custom__');
       }
 
       function getLoadURL(key) {
