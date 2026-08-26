@@ -32,7 +32,6 @@
     <nav class="tabs">
       <button class="tablinks active hidden" name="AdBlocker" id="mainTab">Dashboard</button>
       <button class="tablinks adv-only" name="ShowLog">Logs</button>
-      <button class="tablinks adv-only" name="EditConfig">Settings</button>
       <button class="tablinks adv-only" name="Network">Network</button>
       <button class="tablinks adv-only" name="System">System</button>
       <label class="adv-toggle" title="Reveal logs, settings, network and system">
@@ -83,19 +82,6 @@
         <div id="appLog" class="log"></div>
       </section>
 
-      <!-- ===================== SETTINGS (advanced) ===================== -->
-      <section id="EditConfig" class="tabcontent adv-only">
-        <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
-        <div class="config-group" id="Main01"></div>
-        <div class="tz-wrap">
-          <label for="tzPicker" class="tz-label">Timezone &mdash; used for logs &amp; timestamps</label>
-          <select id="tzPicker" class="selectField"></select>
-          <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
-        </div>
-        <div class="btn-row mt">
-          <button class="btn btn-primary" id="save" value="1">Save</button>
-        </div>
-      </section>
 
       <!-- ===================== NETWORK (advanced) ===================== -->
       <section id="Network" class="tabcontent adv-only">
@@ -115,6 +101,17 @@
         <div class="config-group" id="Main0"></div>
         <div class="btn-row mt">
           <button class="btn btn-primary net-save" id="netsave" value="1">Save &amp; Reboot</button>
+        </div>
+
+        <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
+        <div class="config-group" id="Main01"></div>
+        <div class="tz-wrap">
+          <label for="tzPicker" class="tz-label">Timezone &mdash; used for logs &amp; timestamps</label>
+          <select id="tzPicker" class="selectField"></select>
+          <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
+        </div>
+        <div class="btn-row mt">
+          <button class="btn btn-primary" id="save" value="1">Save</button>
         </div>
       </section>
 
@@ -218,6 +215,8 @@
       function loadNetwork() {
         getConfig('0123');   // netMode + Ethernet
         getConfig('0');      // WiFi station + AP + web access
+        getConfig('01');     // general settings (timezone etc.)
+        setTimeout(syncTzPicker, 500);
         let tries = 0;
         (function wait() {
           tries++;
@@ -469,11 +468,8 @@
           if (abt) abt.addEventListener('change', function () {
             sendControl('zzzAdblockOn', abt.checked ? 1 : 0);
           });
-          let settingsLoaded = false;
           const st = document.querySelector('.tablinks[name="System"]');
           if (st) st.addEventListener('click', loadSysInfo);
-          const setTab = document.querySelector('.tablinks[name="EditConfig"]');
-          if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } setTimeout(syncTzPicker, 500); });
           const netTab = document.querySelector('.tablinks[name="Network"]');
           if (netTab) netTab.addEventListener('click', loadNetwork);
           const mp = document.getElementById('modePicker');
