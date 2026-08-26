@@ -302,6 +302,15 @@
       <!-- ===================== NETWORK (advanced) ===================== -->
       <section id="Network" class="tabcontent adv-only">
         <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save &amp; Reboot</b> to apply — the device restarts.</p>
+        <div class="net-mode" style="margin-bottom:14px;">
+          <label for="modePicker" style="font-weight:600; display:block; margin-bottom:6px;">Connection mode</label>
+          <select id="modePicker" class="selectField" style="max-width:360px;">
+            <option value="0">WiFi station (joins your router's Wi‑Fi)</option>
+            <option value="1">Ethernet (wired to your router)</option>
+            <option value="2">Ethernet + Access Point (wired + own Wi‑Fi)</option>
+          </select>
+          <p class="hint">WiFi: device connects to your router over Wi‑Fi. Ethernet: plug into the router with a cable. Ethernet+AP: wired upstream and the device also broadcasts its own Wi‑Fi network.</p>
+        </div>
         <div class="config-group" id="Main0123"></div>
         <div class="config-group" id="Main0"></div>
         <div class="btn-row" style="margin-top:16px;">
@@ -356,6 +365,7 @@
             if (!confirm(warn)) return;
           }
           else if (key == "netsave") saveChanges("Network settings applied — device rebooting");
+          else if (key == "modePicker") return; // handled by dedicated picker UI
           // operation based on ID
           if (key == "hostName") {
             document.title = value;
@@ -404,13 +414,15 @@
         } catch (e) { el.textContent = 'Failed to load system info: ' + e + '\n(needs firmware with /control?sysinfo)'; }
       }
 
+      var NET_MODE = 0;
       function loadNetwork() {
-        getConfig('0123');   // netMode selector + Ethernet
+        getConfig('0123');   // netMode + Ethernet
         getConfig('0');      // WiFi station + AP + web access
         let tries = 0;
         (function wait() {
           tries++;
-          if (document.getElementById('netMode') || tries > 30) { applyNetModeFromUI(); return; }
+          const nm = document.getElementById('netMode');
+          if (nm || tries > 30) { setNetMode(nm ? (parseInt(nm.value, 10) || 0) : 0, false); return; }
           setTimeout(wait, 100);
         })();
       }
@@ -420,26 +432,31 @@
           if (inp) { const tr = inp.closest('tr'); if (tr) tr.style.display = visible ? '' : 'none'; }
         });
       }
-      function applyNetModeFromUI() {
-        const sel = document.getElementById('netMode');
-        const mode = sel ? (parseInt(sel.value, 10) || 0) : 0;
+      function applyNetModeUI() {
+        const mode = NET_MODE;
+        const m0123 = document.getElementById('Main0123');
+        const m0 = document.getElementById('Main0');
         const ethKeys = ['ethCS','ethInt','ethRst','ethSclk','ethMiso','ethMosi'];
         const staKeys = ['ST_SSID','ST_Pass','ST_ip','ST_gw','ST_sn','ST_ns1','ST_ns2','hostName','wifiTimeoutSecs'];
         const apKeys  = ['AP_Pass','AP_ip','AP_sn','AP_gw','allowAP'];
-        // netMode + Ethernet group always visible; toggle just the Ethernet rows
+        // hide the framework's own netMode row; the dedicated picker is the real control
+        const nm = document.getElementById('netMode');
+        if (nm) { const tr = nm.closest('tr'); if (tr) tr.style.display = 'none'; }
+        // Ethernet container only for ethernet modes (its netMode row is hidden anyway)
+        if (m0123) m0123.style.display = (mode === 1 || mode === 2) ? '' : 'none';
         setRowVisibility(ethKeys, (mode === 1 || mode === 2));
-        // Wireless/AP group always visible; toggle ST vs AP rows
-        if (mode === 0) {            // WiFi station
-          setRowVisibility(staKeys, true);
-          setRowVisibility(apKeys, false);
-        } else if (mode === 1) {     // Ethernet
-          setRowVisibility(staKeys, false);
-          setRowVisibility(apKeys, false);
-        } else {                     // Ethernet + AP
-          setRowVisibility(staKeys, false);
-          setRowVisibility(apKeys, true);
-        }
-        // useHttps / Auth_* / usePing stay visible (web access settings)
+        // Wireless/AP container only for WiFi / Eth+AP
+        if (m0) m0.style.display = (mode === 0 || mode === 2) ? '' : 'none';
+        setRowVisibility(staKeys, mode === 0);
+        setRowVisibility(apKeys, mode === 2);
+        // useHttps / Auth_* / usePing stay visible inside #Main0 when shown
+      }
+      function setNetMode(mode, fromUser) {
+        NET_MODE = mode;
+        const mp = document.getElementById('modePicker');
+        if (mp && mp.value !== String(mode)) mp.value = String(mode);
+        applyNetModeUI();
+        if (fromUser) sendControl('netMode', mode);
       }
 
       var TZ_OPTIONS = [
@@ -644,9 +661,16 @@
           if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } setTimeout(syncTzPicker, 500); });
           const netTab = document.querySelector('.tablinks[name="Network"]');
           if (netTab) netTab.addEventListener('click', loadNetwork);
-          document.addEventListener('change', function (e) {
-            if (e.target && e.target.id === 'netMode') applyNetModeFromUI();
-          });
+          const mp = document.getElementById('modePicker');
+          if (mp) mp.addEventListener('change', function () { setNetMode(parseInt(mp.value, 10) || 0, true); });
+          // keep mode-based visibility correct even when the framework re-renders the tables
+          if (window.MutationObserver) {
+            const obs = new MutationObserver(function () { applyNetModeUI(); });
+            ['Main0123','Main0'].forEach(function (id) {
+              const el = document.getElementById(id);
+              if (el) obs.observe(el, { childList: true, subtree: true });
+            });
+          }
         });
       })();
     </script>
