@@ -26,7 +26,8 @@ static bool wgetFile(const char* filePath) {
     File f = STORAGE.open(filePath, FILE_WRITE);
     if (f) {
       NetworkClientSecure wclient;
-      if (remoteServerConnect(wclient, GITHUB_HOST, HTTPS_PORT, git_rootCACertificate, SETASSIST)) {
+      // public default config: skip cert validation (clock may be wrong pre-NTP)
+      if (remoteServerConnect(wclient, GITHUB_HOST, HTTPS_PORT, "", SETASSIST)) {
         HTTPClient https;
         if (https.begin(wclient, GITHUB_HOST, HTTPS_PORT, downloadURL)) {
           LOG_INF("Downloading %s from %s", filePath, downloadURL);
@@ -216,28 +217,51 @@ const char* otaPage_html = R"~(
   <head>
     <title>OTA</title>
     <style>
-      html body {height: 100%;}
-      body {
-        font-family: Helvetica  !important;
-        background: #181818;
-        color: WhiteSmoke;
-        font-size: 1rem;; 
+      :root{
+        --bg:#eef2f7; --card:#fff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+        --accent:#0f766e; --accent-700:#115e59; --warn:#ef4444;
+        --radius:14px; --shadow:0 1px 3px rgba(15,23,42,.08);
+        --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
       }
+      *{box-sizing:border-box}
+      body{margin:0;font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5}
+      .topbar{display:flex;align-items:center;gap:10px;padding:12px 18px;
+        background:linear-gradient(120deg,var(--accent-700),var(--accent));color:#fff}
+      .logo{font-size:22px}.brand{font-weight:700;font-size:17px}
+      main{max-width:640px;margin:0 auto;padding:18px}
+      .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+        padding:20px;box-shadow:var(--shadow);margin-top:18px}
+      h3{margin:0 0 14px;font-size:17px}
+      .hint{color:var(--muted);font-size:13px;margin:0 0 14px}
+      .filebtn{display:inline-block;padding:12px 18px;border:2px dashed var(--border);border-radius:10px;
+        background:#f8fafc;cursor:pointer;font-weight:600;color:var(--accent-700)}
+      .filebtn:hover{background:#f1f5f9}
+      input[type=file]{display:none}
+      progress{width:100%;height:10px;border:0;appearance:none;display:block;margin:14px 0 6px}
+      progress::-webkit-progress-bar{background:#e2e8f0;border-radius:999px}
+      progress::-webkit-progress-value{background:var(--accent);border-radius:999px}
+      progress::-moz-progress-bar{background:var(--accent)}
+      #status{font-weight:600;margin:4px 0}
+      #loaded_n_total{color:var(--muted);font-size:13px}
+      .link{color:var(--accent-700);font-weight:600;text-decoration:none}
     </style>
   </head>
   <body>
-    <br>
-    <h3>Upload data file or bin file to ESP32</h3>
-    <br>
-    <a href="javascript:history.back()" style="color: WhiteSmoke;">Go Back</a>
-    <br><br><br>
-    <form id="upload_form" enctype="multipart/form-data" method="post">
-      <input type="file" name="otafile" id="otafile" onchange="otaUploadFile()"><br>
-      <br>
-      <progress id="progressOta" value="0" max="100" style="width:200px;"></progress>%
-      <h3 id="status"></h3>
-      <p id="loaded_n_total"></p>
-    </form>
+    <header class="topbar">
+      <span class="logo">🛡️</span><span class="brand">ESP_hole — Update</span>
+    </header>
+    <main>
+      <div class="card">
+        <h3>Update firmware or data</h3>
+        <p class="hint">Upload an application <code>.bin</code> to update the firmware, or a data file (e.g. <code>AdBlocker.htm</code>, <code>common.js</code>) to replace a web file. Progress and result appear below.</p>
+        <label class="filebtn" for="otafile">Choose file…</label>
+        <input type="file" name="otafile" id="otafile" onchange="otaUploadFile()">
+        <progress id="progressOta" value="0" max="100"></progress>
+        <div id="status"></div>
+        <div id="loaded_n_total"></div>
+        <p style="margin-top:16px"><a class="link" href="javascript:history.back()">← Go back</a></p>
+      </div>
+    </main>
     
     <script>
       const defaultPort = window.location.protocol == 'http:' ? 80 : 443; 

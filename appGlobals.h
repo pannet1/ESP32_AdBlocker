@@ -41,6 +41,7 @@
 #define MAX_CONFIGS 60 // > number of entries in configs.txt
 #define GITHUB_PATH "/s60sc/ESP32_AdBlocker/main"
 #define CUSTOM_FILE_PATH DATA_DIR "/custom" TEXT_EXT
+#define BLOCKLIST_CACHE_PATH DATA_DIR "/blcache" TEXT_EXT
 
 #define STORAGE LittleFS // One of LittleFS or SD_MMC
 #define RAMSIZE (1024 * 8) 

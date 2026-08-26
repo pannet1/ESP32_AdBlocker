@@ -338,6 +338,16 @@ static bool startWifi(bool firstcall = true) {
         LOG_SEND(".");
         delay(500);
       }
+      // Force the device's OWN outbound DNS to the configured upstream(s) so the
+      // blocklist download, NTP sync and external-IP check don't depend on the
+      // router's DHCP DNS, which can fail to resolve hosts like raw.githubusercontent.com
+      if (wlStat == WL_CONNECTED && ST_ns1[0] != '\0') {
+        IPAddress _dns1, _dns2;
+        _dns1.fromString(ST_ns1);
+        _dns2.fromString(ST_ns2);
+        WiFi.setDNS(_dns1, _dns2);
+        LOG_INF("Station DNS set to %s", ST_ns1);
+      }
     }
     // show stats of requested SSID
     int numNetworks = WiFi.scanNetworks();
@@ -643,7 +653,7 @@ void remoteServerReset() {
 /************************** NTP  **************************/
 
 // Needs to be a time zone string from: https://raw.githubusercontent.com/nayarsystems/posix_tz_db/master/zones.csv
-char timezone[FILE_NAME_LEN] = "GMT0";
+char timezone[FILE_NAME_LEN] = "GMT-5:30";
 char ntpServer[MAX_HOST_LEN] = "pool.ntp.org";
 uint8_t alarmHour = 1;
 

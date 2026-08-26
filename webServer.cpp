@@ -56,19 +56,8 @@ esp_err_t fileHandler(httpd_req_t* req, bool download) {
     return ESP_OK;
   }
   
-  // Check if browser already has this version of the file
-  char inVer[10];
-  if (httpd_req_get_hdr_value_str(req, "If-None-Match", inVer, sizeof(inVer)) == ESP_OK) {
-    if (atoi(inVer) == CFG_VER) {
-      // already has version cached, no need to resend
-      httpd_resp_set_status(req, "304 Not Modified");
-      return httpd_resp_send(req, NULL, 0); 
-    }
-  }
-  // this version not cached, so send it
-  httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-  itoa(CFG_VER, inVer, 10);
-  httpd_resp_set_hdr(req, "ETag", inVer);
+  // never cache web files: ensures WebDAV edits are served immediately
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store, max-age=0");
   return (download) ? downloadFile(df, req) : sendChunks(df, req);
 }
 
@@ -221,6 +210,18 @@ static esp_err_t controlHandler(httpd_req_t *req) {
   if (extractQueryKeyVal(req, variable, value) != ESP_OK) return ESP_FAIL;
   if (!strcmp(variable, "displayLog")) displayLog(req);
   else {
+    // ESP_hole domain checker endpoints: return JSON, skip the trailing empty body
+    if (!strcmp(variable, "chk")) { classifyDomain(req, value); return ESP_OK; }
+    if (!strcmp(variable, "cblock")) { setCustomDomain(req, value, 0); return ESP_OK; }
+    if (!strcmp(variable, "callow")) { setCustomDomain(req, value, 1); return ESP_OK; }
+    if (!strcmp(variable, "cremove")) { setCustomDomain(req, value, 2); return ESP_OK; }
+    if (!strcmp(variable, "sysinfo")) {
+      char _sibuf[4096];
+      getSysInfo(_sibuf, sizeof(_sibuf));
+      httpd_resp_set_type(req, "text/plain");
+      httpd_resp_sendstr(req, _sibuf);
+      return ESP_OK;
+    }
     if (!strcmp(variable, "reset")) {
       httpd_resp_sendstr(req, NULL); // stop browser resending reset
       doRestart(value); 

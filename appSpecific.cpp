@@ -135,6 +135,94 @@ static void checkDomain(const char* inName, bool doUpdate, bool doDelete) {
   } else LOG_ALT("No domain name entered");
 }
 
+// ---- ESP_hole Domain checker: classify + clean custom-list edit ----
+static void scanCustom(const char* domName, bool& inBlock, bool& inAllow) {
+  // determine if domName is present in /data/custom as block (plain) or allow (#)
+  inBlock = false; inAllow = false;
+  if (!STORAGE.exists(CUSTOM_FILE_PATH)) return;
+  File f = STORAGE.open(CUSTOM_FILE_PATH, FILE_READ);
+  if (!f) return;
+  char nm[IN_FILE_NAME_LEN];
+  while (f.available()) {
+    String s = f.readStringUntil('\n');
+    s.trim();
+    if (!s.length()) continue;
+    if (s.charAt(0) == '#') { strcpy(nm, s.substring(1).c_str()); if (!strcasecmp(nm, domName)) inAllow = true; }
+    else { strcpy(nm, s.c_str()); if (!strcasecmp(nm, domName)) inBlock = true; }
+  }
+  f.close();
+}
+
+static void rewriteCustom(const char* domName, int mode) {
+  // mode 0=block(plain), 1=allow(#), 2=remove(both): drop existing lines for domName, then append target
+  String keep = "";
+  if (STORAGE.exists(CUSTOM_FILE_PATH)) {
+    File f = STORAGE.open(CUSTOM_FILE_PATH, FILE_READ);
+    if (f) {
+      while (f.available()) {
+        String s = f.readStringUntil('\n');
+        s.trim();
+        if (!s.length()) continue;
+        String cmp = (s.charAt(0) == '#') ? s.substring(1) : s;
+        if (strcasecmp(cmp.c_str(), domName) == 0) continue;
+        keep += s + "\n";
+      }
+      f.close();
+    }
+  }
+  STORAGE.remove(CUSTOM_FILE_PATH);
+  File wf = STORAGE.open(CUSTOM_FILE_PATH, FILE_WRITE);
+  if (wf) {
+    if (keep.length()) wf.print(keep);
+    if (mode == 0) wf.println(domName);
+    else if (mode == 1) wf.println("#" + String(domName));
+    wf.close();
+  }
+}
+
+static void applyCustomMem(const char* domName, int mode) {
+  // keep in-memory blockedDomains consistent with the new custom state (no reload needed)
+  uint32_t blPtr = binarySearch(domName, false);
+  bool inBase = (blPtr != 0);
+  if (mode == 1) { if (inBase) *(storage + ptrs[blPtr]) = 0; } // allow: unblock if blocked
+  else if (mode == 0) { if (!inBase && resolveDomain(domName) != IPAddress(0,0,0,0)) { uint32_t ins = binarySearch(domName, true); if (ins) addDomain(ins, domName, strlen(domName)); } }
+  else { if (!inBase && blPtr) *(storage + ptrs[blPtr]) = 0; } // remove: revert non-base to not-listed
+}
+
+void classifyDomain(httpd_req_t* req, const char* inName) {
+  char domName[IN_FILE_NAME_LEN];
+  strcpy(domName, inName);
+  bool valid = formatDomain(domName) > 0;
+  bool inBase = false, inBlock = false, inAllow = false;
+  const char* status = "invalid";
+  if (valid) {
+    inBase = (binarySearch(domName, false) != 0);
+    scanCustom(domName, inBlock, inAllow);
+    if (inAllow) status = "allowed";
+    else if (inBase || inBlock) status = "blocked";
+    else status = "notlisted";
+  }
+  char buf[200];
+  snprintf(buf, sizeof(buf),
+    "{\"domain\":\"%s\",\"valid\":%s,\"inBase\":%s,\"inCustomBlock\":%s,\"inCustomAllow\":%s,\"status\":\"%s\"}",
+    domName, valid?"true":"false", inBase?"true":"false", inBlock?"true":"false", inAllow?"true":"false", status);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, buf);
+}
+
+void setCustomDomain(httpd_req_t* req, const char* inName, int mode) {
+  char domName[IN_FILE_NAME_LEN];
+  strcpy(domName, inName);
+  if (formatDomain(domName) == 0) { httpd_resp_set_type(req, "application/json"); httpd_resp_sendstr(req, "{\"domain\":\"\",\"status\":\"invalid\"}"); return; }
+  rewriteCustom(domName, mode);
+  applyCustomMem(domName, mode);
+  const char* status = (mode == 1) ? "allowed" : (mode == 0 ? "blocked" : "notlisted");
+  char buf[120];
+  snprintf(buf, sizeof(buf), "{\"domain\":\"%s\",\"status\":\"%s\"}", domName, status);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_sendstr(req, buf);
+}
+
 static void extractBlocklist() {
   // extract domain names from downloaded blocklist file
   char* saveItem = NULL;
@@ -166,7 +254,9 @@ static bool downloadBlockList() {
   // download blocklist file from github
   bool res = false;
   NetworkClientSecure wclient;
-  if (remoteServerConnect(wclient, GITHUB_HOST, HTTPS_PORT, git_rootCACertificate, BLOCKLIST)) {
+  // blocklist is a public, non-sensitive file: skip cert validation so the load
+  // succeeds even if the device clock is wrong (NTP may fail on some networks)
+  if (remoteServerConnect(wclient, GITHUB_HOST, HTTPS_PORT, "", BLOCKLIST)) {
     HTTPClient https;
     size_t downloadSize = 0;
     char progStr[10];
@@ -315,6 +405,48 @@ static bool loadBlockList(const char* reason) {
   return downloading;
 }
 
+static const uint32_t BL_CACHE_MAGIC = 0x424C3031;  // "BL01" blocklist cache marker
+
+static bool saveCachedBlockList() {
+  // persist the parsed main blocklist to LittleFS so future boots work offline
+  if (itemsLoaded <= 2) return false;  // nothing meaningful to cache
+  File f = STORAGE.open(BLOCKLIST_CACHE_PATH, FILE_WRITE);
+  if (!f) { LOG_WRN("Cannot open %s for cache write", BLOCKLIST_CACHE_PATH); return false; }
+  uint32_t hdr[5] = { BL_CACHE_MAGIC, 1, itemsLoaded, blocklistSize, duplicates };
+  size_t wrote = 0;
+  wrote += f.write((uint8_t*)hdr, sizeof(hdr));
+  wrote += f.write((uint8_t*)ptrs, (itemsLoaded + 1) * sizeof(uint32_t));
+  wrote += f.write((uint8_t*)storage, blocklistSize);
+  f.close();
+  size_t expect = sizeof(hdr) + (itemsLoaded + 1) * sizeof(uint32_t) + blocklistSize;
+  if (wrote != expect) { LOG_WRN("Blocklist cache write incomplete (%u/%u)", wrote, expect); return false; }
+  LOG_INF("Blocklist cached to %s (%lu domains, %s)", BLOCKLIST_CACHE_PATH, itemsLoaded - 2, fmtSize(blocklistSize));
+  return true;
+}
+
+static bool loadCachedBlockList() {
+  // restore parsed main blocklist from LittleFS (fast, offline-capable)
+  if (!STORAGE.exists(BLOCKLIST_CACHE_PATH)) return false;
+  File f = STORAGE.open(BLOCKLIST_CACHE_PATH, FILE_READ);
+  if (!f) return false;
+  uint32_t hdr[5];
+  if (f.read((uint8_t*)hdr, sizeof(hdr)) != sizeof(hdr)) { LOG_WRN("Blocklist cache header unreadable"); f.close(); return false; }
+  if (hdr[0] != BL_CACHE_MAGIC) { LOG_WRN("Blocklist cache magic mismatch"); f.close(); return false; }
+  uint32_t cachedItems = hdr[2], cachedSize = hdr[3], cachedDup = hdr[4];
+  if (cachedItems == 0 || cachedItems > maxDomains || cachedSize == 0 || cachedSize > storageSize) {
+    LOG_WRN("Blocklist cache rejected (items=%lu size=%u, limit %u)", cachedItems, cachedSize, storageSize); f.close(); return false;
+  }
+  size_t needPtrs = (cachedItems + 1) * sizeof(uint32_t);
+  if (f.read((uint8_t*)ptrs, needPtrs) != needPtrs) { LOG_WRN("Blocklist cache ptrs unreadable"); f.close(); return false; }
+  if (f.read((uint8_t*)storage, cachedSize) != cachedSize) { LOG_WRN("Blocklist cache storage unreadable"); f.close(); return false; }
+  f.close();
+  itemsLoaded = cachedItems;
+  blocklistSize = cachedSize;
+  duplicates = cachedDup;
+  LOG_INF("Blocklist restored from cache %s (%lu domains, %s)", BLOCKLIST_CACHE_PATH, itemsLoaded - 2, fmtSize(blocklistSize));
+  return true;
+}
+
 void appSetup() {
   while (!strlen(fileURL)) {
     LOG_ALT("Enter blocklist URL on web page ...");
@@ -333,7 +465,35 @@ void appSetup() {
 
   updateConfigVect("blockCnt", "0");
   updateConfigVect("allowCnt", "0");
-  if (loadBlockList("Initial")) prepDNS();
+
+  // 1) Restore blocklist from LittleFS cache (fast, works with no internet)
+  bool fromCache = loadCachedBlockList();
+  if (fromCache) {
+    loadCustom();
+    updateConfigVect("loadProg", "Cached");
+    LOG_INF("Blocklist ready from cache (%lu domains); DNS + blocking up", itemsLoaded - 2);
+  }
+
+  // 2) ALWAYS start the DNS server now (fail-safe). With a cached list, blocking is
+  //    active immediately; without one, it runs forwarding-only until a list arrives.
+  prepDNS();
+
+  // 3) If we have no cache yet, this is first-run / cache-missing: download once to
+  //    populate it. We deliberately do NOT download on every boot.
+  if (!fromCache) {
+    if (netIsConnected()) {
+      if (loadBlockList("Initial")) {
+        saveCachedBlockList();   // loadBlockList already applied custom
+        updateConfigVect("loadProg", "Complete");
+      } else {
+        updateConfigVect("loadProg", "Failed");
+        snprintf(startupFailure, SF_LEN, STARTUP_FAIL "Blocklist unavailable (no cache, no internet)");
+        LOG_WRN("No blocklist available; forwarding-only DNS until connectivity returns");
+      }
+    } else {
+      LOG_INF("No internet at first boot and no cache; forwarding-only until connectivity returns");
+    }
+  }
 }
 
 /************************ webServer callbacks *************************/
@@ -445,7 +605,19 @@ bool appDataFiles() {
 
 void doAppPing(bool timeSynced) {
   // if daily alarm occurs, load latest blocklist from host site
-  if (checkAlarm() && strlen(fileURL)) loadBlockList("Scheduled");
+  if (checkAlarm() && strlen(fileURL)) {
+    if (loadBlockList("Scheduled")) saveCachedBlockList();  // refresh cache on update
+  }
+  // If we still have no usable blocklist (e.g. first boot with no internet), retry the
+  // download whenever connectivity is present so we eventually cache + start blocking.
+  if (itemsLoaded <= 2 && netIsConnected() && !downloading) {
+    static uint32_t lastRetryMs = 0;
+    if (millis() - lastRetryMs > 60000) {  // at most one attempt per minute
+      lastRetryMs = millis();
+      LOG_INF("Retrying blocklist download (no list cached yet)...");
+      if (loadBlockList("Retry")) saveCachedBlockList();
+    }
+  }
 }
 
 void OTAprereq() {
@@ -468,7 +640,7 @@ AP_sn~~0~T~AP subnet
 AP_gw~~0~T~AP gateway
 useHttps~0~0~C~Enable HTTPS connection to app
 allowAP~0~0~C~Allow simultaneous AP
-timezone~GMT0~1~T~Timezone string: tinyurl.com/TZstring
+timezone~GMT-5:30~1~T~Timezone string: tinyurl.com/TZstring
 logType~0~99~N~Output log selection
 Auth_Name~~0~T~Optional user name for web page login
 Auth_Pass~~0~T~Optional web page password

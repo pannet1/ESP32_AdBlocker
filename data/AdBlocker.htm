@@ -1,530 +1,341 @@
-
 <!DOCTYPE html>
-<!-- 
-  s60sc 2022 
--->     
-<html>     
+<!-- ESP_hole dashboard (reskin + curated home) -->
+<html lang="en">
   <head>
-    <meta charset="UTF-8">  
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>ESP32_AdBlocker</title>
-    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">⛔</text></svg>'>
-    
+    <title>ESP_hole</title>
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🛡️</text></svg>'>
+
     <style>
       :root {
-        /* colors used on web pages - see https://www.w3schools.com/colors/colors_names.asp */
-        --buttonReady: LightGray;
-        --buttonActive: DarkGray;
-        --buttonHover: silver; 
-        --buttonText: white;
-        --buttonLabel: black;
-        --itemInactive: Gainsboro; /* very light gray */
-        --menuBackground: LightGray;
-        --inputText: navy;
-        --pageText: black; 
-        --inputBackground: whiteSmoke; 
-        --alertMsg: red;
-        --itemBorder: LightGray; 
-        --pageBackground: white;
-        
-        /* logcolors */
-        --warnColor: orange;
-        --errColor: red;
-        --chkColor: green;
-        --dbgColor: blue;
-        
-        /* element sizes */
-        --bodySize:1rem; /* used as basis for element, padding, and font sizes */
-        --buttonSize: var(--bodySize);
-        --buttonHalf: calc(var(--buttonSize) / 2);
-        --buttonQuart: calc(var(--buttonSize) / 4);
-        --buttonDbl: calc(var(--buttonSize) * 2);
-        --inputSize: calc(var(--bodySize) * 0.9);
-        --headingSize: calc(var(--bodySize) * 1.25);
-        --subheadingSize: var(--bodySize);
-        --footerSize: calc(var(--bodySize) * 0.7);   
+        --bg: #eef2f7;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #0f766e;
+        --accent-600: #0d9488;
+        --accent-700: #115e59;
+        --on: #10b981;
+        --on-bg: #ecfdf5;
+        --off: #f59e0b;
+        --off-bg: #fffbeb;
+        --warn: #ef4444;
+        --radius: 14px;
+        --shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
+        --shadow-lg: 0 10px 30px rgba(15,23,42,.10);
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
       }
 
-      html body {height: 100%;}      
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
       body {
-        font-family: Helvetica  !important;
-        background: var(--pageBackground);
-        color: var(--pageText);
-        font-size: var(--bodySize);      
-      }
-      
-      .hidden {
-        display: none;
-      }
-      
-      progress {
-        accent-color: var(--buttonActive);    
-        width: calc(var(--buttonSize) * 15);
-      }
-      
-      .fixed {
-        position: fixed;
-        top: 0;
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        line-height: 1.5;
+        -webkit-text-size-adjust: 100%;
       }
 
-      .alertMsg {
-        left:10%;
-        bottom: var(--buttonDbl);
-        position:absolute;
-        display:block;
-        color:var(--alertMsg);
-        z-index:20;
-        height: var(--buttonDbl);
-      }
-    
-      .header {
-        font-size: var(--headingSize);
-        padding-left: var(--buttonHalf);
-        font-weight:bold;
-      }
-      
-      .subheader {
-        font-style: italic;
-        font-size: var(--subheadingSize);
-        padding-left: var(--buttonQuart);
-      }          
-    
-      .tab {
-        display: flex;
-        overflow: hidden;
-        background: var(--menuBackground);
-      }
+      .hidden { display: none; }
 
-      .tab button {
-        background: var(--buttonReady);
-        float: left;
-        border: none;
-        outline: none;
-        cursor: pointer;
-        padding: var(--buttonHalf);
-        transition: 0.3s;
-        font-size: calc(var(--buttonSize) * 1.1);
+      /* ---- top bar ---- */
+      .topbar {
+        position: sticky; top: 0; z-index: 30;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 18px;
+        background: linear-gradient(120deg, var(--accent-700), var(--accent));
+        color: #fff; box-shadow: var(--shadow);
       }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; }
+      .logo { font-size: 22px; }
+      .status { display: flex; align-items: center; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 5px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
+      }
+      .pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+      .pill-on { background: var(--on-bg); color: #047857; border: 1px solid #a7f3d0; }
+      .pill-off { background: var(--off-bg); color: #b45309; border: 1px solid #fde68a; }
+      .adv-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: 14px; cursor: pointer; }
+      .adv-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.88); }
+      .ab-switch { position: relative; display: inline-block; width: 82px; height: 32px; cursor: pointer; }
+      .ab-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+      .ab-track { position: absolute; inset: 0; border-radius: 999px; background: #c7ccd1; transition: background .2s ease; }
+      .ab-switch input:checked + .ab-track { background: #34c759; }
+      .ab-on, .ab-off { position: absolute; top: 0; height: 32px; display: flex; align-items: center; font-size: 11px; font-weight: 700; letter-spacing: .3px; color: #fff; transition: opacity .2s ease; }
+      .ab-on { left: 11px; opacity: 0; }
+      .ab-off { right: 9px; opacity: 1; }
+      .ab-switch input:checked + .ab-track .ab-on { opacity: 1; }
+      .ab-switch input:checked + .ab-track .ab-off { opacity: 0; }
+      .ab-knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s ease; }
+      .ab-switch input:checked + .ab-track .ab-knob { transform: translateX(50px); }
 
-      .tab button.active {
-        box-shadow: 0 0 0 var(--buttonQuart)  var(--buttonActive);
-        background: var(--buttonActive);
+      /* ---- tabs ---- */
+      .tabs {
+        position: sticky; top: 57px; z-index: 20;
+        display: flex; gap: 2px; background: #fff;
+        border-bottom: 1px solid var(--border); padding: 0 10px; overflow-x: auto;
       }
-      
-      .tab button.hover {
-        background: var(--buttonHover);
+      .tablinks {
+        appearance: none; border: 0; background: transparent; color: var(--muted);
+        font: inherit; font-weight: 600; padding: 14px 16px; cursor: pointer;
+        position: relative; white-space: nowrap;
       }
+      .tablinks:hover { color: var(--text); }
+      .tablinks.active { color: var(--accent-700); }
+      .tablinks.active::after {
+        content: ""; position: absolute; left: 12px; right: 12px; bottom: -1px;
+        height: 3px; border-radius: 3px 3px 0 0; background: var(--accent);
+      }
+      .tabcontent { display: none; padding: 18px; max-width: 1100px; margin: 0 auto; }
 
-      .tab button.disabled {
-        cursor: default;
-        background: var(--itemInactive)
-      }
-      
-      .tabcontent {
-        display: none;
-      }
-      
-      .grid-cols3 {
-        grid-template-columns: calc(var(--buttonSize) * 14) calc(var(--buttonSize) * 12) calc(var(--buttonSize) * 12);
-      }
-      
-      .grid-cols4 {
-        grid-template-columns: calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10) calc(var(--buttonSize) * 10)
-      }
-      
-      .grid-cols3, .grid-cols4 {
-        display: grid;
-        background: none;
-        text-align: center;
-        font-size: var(--inputSize);
-        fill: var(--buttonLabel);
-        border: 0px solid var(--itemBorder);
-        dominant-baseline: middle;
-        text-anchor: middle;
-      }
-      
-      .cfgTitle {
-        grid-column: 1/5;
-        text-align: left;
-      }
-      
-      svg {
-        width: calc(var(--buttonSize) * 8);
-        height: var(--buttonDbl);
-      }
-      
-      rect {
-        fill: var(--buttonReady);
-        width: 100%;
-        height: 100%; 
-        x: 0;
-        y: 0;
-        ry: 15%;
-      }
-       
-      .buttonRect:focus {
-        fill: var(--buttonActive);
-        outline: none; /* Remove focus outline if not needed */
-      }
-      
-      rect:hover {
-        fill: var(--buttonHover);
-      }
-    
-      text {
-        font-size: var(--buttonSize); 
-        fill: var(--buttonText); 
-        transform: translate(50%,50%);  
-        pointer-events: none;
-      }
-      
-      .panel {
-        padding: 0 var(--buttonSize);
-        display: none;
-        background-color: var(--pageBackground);
-        overflow: hidden;
-      }
-      
-      button {
-        display: block;
-        margin: var(--buttonQuart);
-        padding: var(--buttonQuart);
-        border: 0;
-        line-height: var(--headingSize);
-        cursor: pointer;
-        color: var(--buttonText);
-        background: var(--buttonReady);
-        border-radius: var(--buttonQuart);
-        font-size: var(--buttonSize);
-        outline: 0
-      }
-      
-      button:active {
-       box-shadow: 0 0 0 var(--buttonQuart) var(--buttonActive);
-       background: var(--buttonActive);
-      }
+      /* advanced-only elements hidden unless Advanced mode is on */
+      body:not(.advanced) .adv-only { display: none !important; }
 
-      button:hover {
-        background: var(--buttonHover);
+      /* ---- dashboard ---- */
+      .dash {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px; margin-bottom: 22px;
       }
+      .card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+      }
+      .stat-label {
+        font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
+        color: var(--muted); font-weight: 600;
+      }
+      .stat-value { font-size: 18px; font-weight: 700; margin-top: 4px; word-break: break-word; }
+      .card-title { font-weight: 700; margin-bottom: 10px; }
+      .sys-info { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.5; background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 10px; max-height: 60vh; overflow: auto; margin: 0; }
+      .filebtn { display: inline-block; padding: 12px 18px; border: 2px dashed var(--border); border-radius: 10px; background: #f8fafc; cursor: pointer; font-weight: 600; color: var(--accent-700); }
+      .filebtn:hover { background: #f1f5f9; }
+      .ota-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; }
+      .ota-card .filebtn { margin: 0; }
+      .ota-card .progress { width: 100%; margin: 6px 0 0; }
+      input[type=file] { display: none; }
+      .progress { width: 100%; height: 10px; border-radius: 999px; overflow: hidden; background: #e2e8f0; margin: 14px 0 6px; }
+      progress { width: 100%; height: 10px; border: 0; appearance: none; }
+      progress::-webkit-progress-bar { background: #e2e8f0; border-radius: 999px; }
+      progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; }
+      progress::-moz-progress-bar { background: var(--accent); }
+      .text-input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: var(--font); }
+      .checker-row { display: flex; gap: 10px; margin: 6px 0 12px; }
+      .checker-row .text-input { flex: 1; }
+      .checker-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .btn-ghost { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+      .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+      .badge.blocked { background: #fee2e2; color: #b91c1c; }
+      .badge.allowed { background: #dcfce7; color: #15803d; }
+      .badge.notlisted { background: #e2e8f0; color: #475569; }
+      .badge.invalid { background: #fef3c7; color: #92400e; }
 
-      button:disabled {
-        cursor: default;
-        background: var(--itemInactive)
+      /* ---- buttons ---- */
+      .btn {
+        appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
+        padding: 10px 16px; border-radius: 10px; background: var(--accent); color: #fff;
+        transition: filter .15s, transform .05s;
       }
-      
-      .input-group {
-        position: relative;
-        display: flex;
-        flex-wrap: nowrap;
-        line-height: var(--buttonDbl);
-        margin-top: var(--buttonHalf);
-      }
-      
-      .input-group>label {
-        display: inline-block;
-        padding-right: var(--buttonHalf);
-        min-width: calc(var(--buttonSize)*7);
-      }
-      
-      .input-group>input {
-          width: 100%;
-      }
+      .btn:hover { filter: brightness(1.06); }
+      .btn:active { transform: translateY(1px); }
+      .btn-block { background: #0f766e; }
+      .btn-ghost { background: #e2e8f0; color: #0f172a; }
+      .btn-warn { background: var(--warn); }
+      .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 16px; }
+      .log-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+      .ctl-label { font-weight: 600; color: var(--muted); }
 
-      .input-group input,.input-group select {
-        flex-grow: 1
-      }
-      
-      input, #appLog {
-        font: var(--inputSize) 'Courier New';
-        font-weight:bold;
-        color: var(--inputText);
-        background: var(--inputBackground);
-        min-width: calc(var(--buttonSize) * 10);     
-      }
-      
-      input[type="radio"], input[type="checkbox"], progress {
-        accent-color: var(--buttonActive);
-      }
-
-      input[type="text"]{
-        font-size: var(--inputSize); 
-        width: calc(var(--buttonSize) * 6);
-      }
-      
-      input[type="checkbox"] {
-        width : calc(var(--inputSize) * 1.5);
-        height : calc(var(--inputSize) * 1.5);
-        margin-top: calc(var(--buttonQuart) * -1);
-      }
-      
-      input[type="radio"] {
-        width: var(--inputSize);
-        height: var(--inputSize);
-        min-width: var(--buttonSize);
-      }
-      
-      input[type="number"]:not(.configItem), input[type="time"] {
-        font-size: var(--buttonDbl);
-        border: 1px solid var(--itemBorder);
-        margin-bottom: var(--buttonQuart);
-        min-width: calc(var(--buttonSize) * 7);
-        text-align: center;
-      } 
-      
-      input[type=number]::-webkit-inner-spin-button {
-        opacity: 1;
-      }
-      
-      input[type="button"]:focus {
-        background-color: var(--buttonActive);
-      }
- 
-      
-      /* checkbox slider */
-
-      /* Hide the default checkbox */
-      .switch input[type="checkbox"] {
-        display: none;
-      }
-
-      /* static part */
+      /* ---- toggle switch (framework .switch) ---- */
+      .switch { position: relative; display: inline-block; width: 46px; height: 26px; vertical-align: middle; }
+      .switch input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
       .switch .slider {
-        width: calc(var(--buttonSize) * 3);  
-        height: var(--buttonSize);
-        top: calc(var(--buttonQuart) / 2);
-        background: var(--itemInactive);
-        position: relative;
-        display: inline-block;
-        border-radius: var(--buttonSize);
+        position: absolute; inset: 0; cursor: pointer;
+        background: #cbd5e1; border: 1px solid #94a3b8; border-radius: 999px;
+        transition: background .2s, border-color .2s;
       }
-      .switch input[type="checkbox"]:checked + .slider {
-        background-color: var(--buttonActive);
-      }
-
-      /* moving part */
+      .switch input[type="checkbox"]:checked + .slider { background: var(--accent); border-color: var(--accent-700); }
       .switch .slider::before {
-        content: "";
-        height: var(--buttonSize);
-        width: var(--buttonSize);
-        background: var(--inputBackground);
-        position: absolute;
-        left: var(--buttonQuart);
-        border-radius: var(--buttonSize);
-        transition: transform 0.4s;
+        content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+        background: #fff; border-radius: 50%; box-shadow: 0 1px 2px rgba(15,23,42,.25); transition: transform .2s;
       }
-      .switch input[type="checkbox"]:checked + .slider::before {
-        transform: translateX(calc(var(--buttonSize)*1.5));
+      .switch input[type="checkbox"]:checked + .slider::before { transform: translateX(20px); }
+
+      /* ---- config table (auto-generated) ---- */
+      .config-group table {
+        width: 100%; border-collapse: collapse; background: var(--card);
+        border: 1px solid var(--border); border-radius: var(--radius);
+        overflow: hidden; box-shadow: var(--shadow); margin-top: 6px;
+      }
+      .config-group th {
+        background: #f8fafc; text-align: left; padding: 10px 14px;
+        border-bottom: 1px solid var(--border); font-size: 13px;
+        text-transform: uppercase; letter-spacing: .03em; color: var(--muted);
+      }
+      .config-group td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+      .config-group tr:last-child td { border-bottom: 0; }
+      .config-group input[type=text], .config-group input[type=number] {
+        padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+        font: inherit; min-width: 120px;
+      }
+      .action-btn {
+        appearance: none; border: 0; cursor: pointer; font: inherit; font-weight: 600;
+        padding: 8px 14px; border-radius: 8px; background: var(--accent); color: #fff;
+      }
+      .action-btn:hover { filter: brightness(1.06); }
+
+      /* ---- log ---- */
+      .log {
+        height: 55vh; width: 100%; border: 1px solid var(--border); border-radius: var(--radius);
+        background: #0f172a; color: #e2e8f0; font-family: var(--mono); font-size: 13px;
+        padding: 12px; overflow: auto; white-space: pre-wrap;
       }
 
-      
-      #appLog{
-        height:50vh;
-        width:90%;
-        border:2px solid var(--itemBorder);
-        overflow:auto;
-        background: var(--inputBackground);
-        white-space: pre-wrap; /* preserves spaces, tabs, and newlines */
+      /* ---- misc ---- */
+      .alertMsg { position: fixed; left: 0; right: 0; bottom: 16px; text-align: center; z-index: 50; pointer-events: none; }
+      .alertMsg span {
+        display: none; background: #fff; border: 1px solid var(--warn); color: var(--warn);
+        padding: 8px 16px; border-radius: 10px; box-shadow: var(--shadow-lg); font-weight: 600;
       }
-      
-      select {
-        border: 1px solid var(--menuBackground);
-        font-size: var(--inputSize);
-        outline: 0;
-        border-radius: var(--buttonQuart);
-        margin-top: 2px;
+      .alertMsg span:not(:empty) { display: inline-block; }
+      .cfg-head { font-size: 16px; font-weight: 800; margin-top: 6px; }
+      .hint { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+
+      @media (max-width: 640px) {
+        .topbar { padding: 10px 14px; }
+        .tabcontent { padding: 14px 12px; }
+        .dash { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+        .stat-value { font-size: 16px; }
       }
-      
-      .selectField {
-         height: calc(var(--inputSize) * 1.5);
-      }
-      
-      table {
-        border-collapse:collapse; 
-        table-layout:fixed;
-        background: var(--menuBackground);
-        text-align: left;
-      }
-      
-      th, td {
-        font-weight:bold; 
-      }
-      
-      .config-group th, .config-group td {
-        border: 0;
-        padding: var(--buttonHalf) var(--buttonHalf) 0 var(--buttonHalf); 
-        padding-left: var(--buttonSize);
-        line-height: var(--buttonDbl);
-        font-size: var(--buttonSize);
-      } 
-      
-      .configGroup td input[type="number"] {
-        font-size: var(--buttonSize);
-      }
-      
-      input.configItem[type="radio"] {
-        min-width: var(--buttonSize); 
-      }
-      
-      input.configItem[type="number"] {
-        min-width: calc(var(--buttonSize) * 3); 
-        width: calc(var(--buttonSize) * 3); 
-      }
-      
-      .svgCols {
-        width: calc(var(--buttonSize) * 9);  
-        height: calc(var(--buttonSize) * 2);  
-        fill: var(--buttonLabel);
-        font-size: calc(var(--buttonSize) * 1.5);
-      }   
-      
-      .upperText {
-        transform: translate(50%,30%);  
-      }
-      
-      .lowerText {
-        transform: translate(50%,70%);  
-      }
-      
-      .midText {
-        transform: translate(50%,50%); 
-      }
-      
-      .btnText {
-        transform: translate(0%,70%); 
-      }
-      
     </style>
   </head>
-  
-  <body>
-    <div class="tab fixed">
-      <button class="tablinks active" name="AdBlocker" id="mainTab">AdBlocker</button>
-      <button class="tablinks" name="ShowLog">Show Log</button>
-      <button class="tablinks" name="EditConfig">Edit Config</button>
-      <button class="tablinks" onclick="window.location.href='/web?OTA.htm'">OTA Upload</button>
-    </div>
-    <br><br><br>
-    <div id="AdBlocker" class="tabcontent" style="display:block">
-      <div>
-        <p class='config-group' id="Main012"></p>
-      </div>
-    </div>
 
-    <div id="ShowLog" class="tabcontent">
-      <br>
-      <div class="grid-cols4">
-        <div class="input-group" id="dbg-group" style="align-items: center; grid-column: span 2">
-          <label for="dbgVerbose" class="header" title="Set verbose logging">Verbose:</label>
-          <div class="switch">
-            <input id="dbgVerbose" type="checkbox">
-            <label title="Outputs additional information to log" class="slider" for="dbgVerbose"></label>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">🛡️</span>
+        <span class="brand-name" id="dash_host">ESP_hole</span>
+      </div>
+      <div class="status">
+        <label class="ab-switch" title="Enable or pause ad blocking">
+          <input type="checkbox" id="abToggle">
+          <span class="ab-track">
+            <span class="ab-on">Active</span>
+            <span class="ab-off">Inactive</span>
+            <span class="ab-knob"></span>
+          </span>
+        </label>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tablinks active" name="AdBlocker" id="mainTab">Dashboard</button>
+      <button class="tablinks adv-only" name="ShowLog">Logs</button>
+      <button class="tablinks adv-only" name="EditConfig">Settings</button>
+      <button class="tablinks adv-only" name="Network">Network</button>
+      <button class="tablinks adv-only" name="System">System</button>
+      <label class="adv-toggle" title="Reveal logs, settings, network and system" style="margin-left:auto; align-self:center;">
+        <span class="adv-label">Advanced</span>
+        <span class="switch"><input type="checkbox" id="advToggle"><span class="slider"></span></span>
+      </label>
+    </nav>
+
+    <main>
+      <!-- ===================== DASHBOARD (normal user) ===================== -->
+      <section id="AdBlocker" class="tabcontent" style="display:block">
+        <div class="dash">
+          <section class="card" style="grid-column: 1 / -1;">
+            <div class="card-title">Your network is protected</div>
+            <p class="hint">Ads, trackers and malware are being blocked for every device on your network.</p>
+          </section>
+
+          <div class="card stat"><div class="stat-label">Uptime</div><div class="stat-value" id="dash_uptime">—</div></div>
+          <div class="card stat"><div class="stat-label">Connection</div><div class="stat-value" id="dash_mode">—</div></div>
+          <div class="card stat"><div class="stat-label">Device IP</div><div class="stat-value" id="dash_ip">—</div></div>
+          <div class="card stat"><div class="stat-label">External IP</div><div class="stat-value" id="dash_extip">—</div></div>
+          <div class="card stat"><div class="stat-label">WiFi signal</div><div class="stat-value" id="dash_rssi">—</div></div>
+
+          <!-- The only thing a normal user does: block / unblock a site -->
+          <section class="card" style="grid-column: 1 / -1;">
+            <div class="card-title">Block or unblock a website</div>
+            <p class="hint">Type a website to see whether it is blocked. Then block or unblock it with one tap — changes apply instantly and survive updates.</p>
+            <div class="checker-row">
+              <input type="text" id="chkDomain" placeholder="e.g. doubleclick.net" class="text-input">
+              <button id="chkBtn" class="btn">Check</button>
+            </div>
+            <div id="chkResult" class="stat-value">Type a site above and press Check.</div>
+            <div id="chkActions" class="checker-actions"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===================== LOGS (advanced) ===================== -->
+      <section id="ShowLog" class="tabcontent adv-only">
+        <p class="hint">Live device log (auto-rotating 7KB RAM buffer). Enable Verbose for more detail. Refresh reloads, Clear wipes stored entries, Download saves the log to your PC.</p>
+        <div class="log-controls">
+          <label class="switch"><input id="dbgVerbose" type="checkbox"><span class="slider"></span></label>
+          <span class="ctl-label">Verbose</span>
+          <button class="btn" id="refreshLog" value="1">Refresh</button>
+          <button class="btn" id="clearLog" value="1">Clear</button>
+          <button class="btn" id="saveLog" value="1">Download</button>
+        </div>
+        <div id="appLog" class="log"></div>
+      </section>
+
+      <!-- ===================== SETTINGS (advanced) ===================== -->
+      <section id="EditConfig" class="tabcontent adv-only">
+        <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
+        <div class="config-group" id="Main01"></div>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn btn-primary" id="save" value="1">Save</button>
+        </div>
+      </section>
+
+      <!-- ===================== NETWORK (advanced) ===================== -->
+      <section id="Network" class="tabcontent adv-only">
+        <p class="hint">Configure the wireless interface (WiFi station + AP) and Ethernet. Pick an option, edit the fields, then press Save to apply.</p>
+        <div class="btn-row">
+          <button class="btn" id="wifi" value="1">Wireless</button>
+          <button class="btn" id="ethernet" value="1">Ethernet</button>
+        </div>
+        <div class="config-group" id="Main0"></div>
+        <div class="config-group" id="Main0123"></div>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn btn-primary net-save" id="save" value="1" style="display:none;">Save</button>
+        </div>
+      </section>
+
+      <!-- ===================== SYSTEM (advanced) ===================== -->
+      <section id="System" class="tabcontent adv-only">
+        <div class="card">
+          <p class="hint">Chip, flash, memory, partitions and running-task details.</p>
+          <pre id="sysInfo" class="sys-info">Hardware details load automatically when this tab is opened.</pre>
+        </div>
+        <div class="btn-row">
+          <button class="btn" id="reset" value="1">Reboot</button>
+          <button class="btn btn-warn" id="deldata" value="1">Factory reset</button>
+          <button class="btn btn-warn" id="clear" value="1">Clear NVS</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Update firmware or data</div>
+          <p class="hint">Upload an application <code>.bin</code> to update the firmware, or a data file (e.g. <code>AdBlocker.htm</code>, <code>common.js</code>) to replace a web file. Progress and result appear below.</p>
+          <div class="ota-card">
+            <label class="filebtn" for="otaFile">Choose file…</label>
+            <input type="file" id="otaFile">
+            <div class="progress"><progress id="otaProgress" value="0" max="100"></progress></div>
+            <div id="otaStatus" class="stat-value"></div>
+            <div id="otaLoaded" class="hint"></div>
           </div>
         </div>
-        <div>
-          <svg>
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="showsys" class="midText">System</text>
-          </svg>
-        </div>
-        <br>
-        <div style="grid-column: span 4"><br></div>
-        <div>
-          <svg>
-            <rect class="buttonRect" tabindex="0"/>
-            <text class="local" id="refreshLog">Refresh Log</text>
-          </svg>
-        </div>
-        <div>
-          <svg>
-            <rect class="buttonRect" tabindex="0"/>
-            <text class="local" id="clearLog">Clear Log</text>
-          </svg>
-        </div>
-        <div>
-          <svg>
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="save" class="midText">Save</text>
-          </svg>
-        </div>
-        <div>
-          <svg>
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="reset" class="midText">Reboot ESP</text>
-          </svg>
-        </div>
-      </div>
-      <br>
-      <div id="appLog"></div>
-      <br>
-    </div>
-    
-    <div id="EditConfig" class="tabcontent">
-      <br>
-      <div class="header">Control</div>
-      <br>
-      <div class="grid-cols3">
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="reset" class="midText">Reboot ESP</text>
-          </svg>
-        </div>
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="deldata" class="midText">Reload /data</text>
-          </svg>
-        </div>
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="clear" class="midText">Clear NVS</text>
-          </svg>
-        </div>
-        <div class="cfgTitle">
-          <br>
-          <div class="header">Settings</div>
-          <div class="subheader">Press a button to view or modify settings (changed values are not validated)</div>
-          <div class="subheader">Press Save button to make changes permanent</div>
-          <br>
-        </div>
-      </div>
-      <div class="grid-cols4">
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="wifi" class="midText">Network</text>
-          </svg>
-        </div>
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="settings" class="midText">Settings</text>
-          </svg>
-        </div>
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-            <text id="ethernet" class="midText">Ethernet</text>
-          </svg>
-        </div>
-        <div>
-          <svg class="svgCols">
-            <rect class="buttonRect" tabindex="0"/>
-      	    <text id="save" class="midText">Save</text>
-          </svg>
-        </div>
-      </div>
-      <div>
-        <p class='config-group' id='Cfg'></p>
-      </div>
-    </div>
-           
-    <div class="alertMsg">
-      <span id="alertText"></span>
-    </div>
-    
+      </section>
+    </main>
+
+    <div class="alertMsg"><span id="alertText"></span></div>
+
+    <!-- ============ framework glue (keep, page-specific) ============ -->
     <script>
       'use strict'
 
@@ -534,34 +345,70 @@
       function processStatus(dest, key, value, fromUser = true) {
         // process change to status value
         if (dest == ID) {
+          // confirm before destructive actions
+          if (key == "reset" || key == "deldata" || key == "clear") {
+            const warn = {
+              reset:   "Reboot the device? It will go offline for a few seconds.",
+              deldata: "Factory reset? This wipes ALL /data (web UI, blocklist, config) and reboots. This cannot be undone.",
+              clear:   "Clear NVS? This erases saved preferences. This cannot be undone."
+            }[key];
+            if (!confirm(warn)) return;
+          }
           // operation based on ID
-          if (key == "wifi") getConfig("0");
+          if (key == "wifi") { ['Main0','Main0123'].forEach(id => { const e = $('#'+id); if (e) e.style.display = (id=='Main0') ? '' : 'none'; }); getConfig("0"); }
           else if (key == "hostName") {
             document.title = value;
             if (fromUser) sendControl(key, value);
           }
           else if (key == "clearLog") clearLog();
+          else if (key == "saveLog") saveLog();
           else if (key == "refreshLog") getLog();
           else if (key == "reset") saveChanges();
-          else if (key == "refreshVal") refreshInterval = value * 1000; 
+          else if (key == "refreshVal") refreshInterval = value * 1000;
           else if (key == "clockUTC") { appClock = value; checkTime(value); }
           else if (key == "settings") getConfig("01");
-          else if (key == "ethernet") getConfig("0123");
+          else if (key == "ethernet") { ['Main0','Main0123'].forEach(id => { const e = $('#'+id); if (e) e.style.display = (id=='Main0123') ? '' : 'none'; }); getConfig("0123"); }
           else if (key == "fileURLn") return;
           else if (key == "xStop") { if (fromUser) sendControl(key, value); return; }
           else if (key == "zLoad" || key == "uLoad" || key == "vLoad" || key == "wLoad") { if (fromUser) getLoadURL(key); return; }
+          else if (key == "showsys") { if (fromUser) loadSysInfo(); return; }
           // remaining changes are passed thru to app
-          else if (fromUser) sendControl(key, value); 
+          else if (fromUser) sendControl(key, value);
         }
         else if (dest == CLASS) {}
       }
-      
+
+      async function saveLog() {
+        // download the device's raw log directly (same source as Refresh)
+        const url = (typeof logType !== 'undefined' && logType == 1) ? '/web?log.txt' : '/control?displayLog=1';
+        try {
+          const res = await fetch(url);
+          const text = await res.text();
+          const blob = new Blob([text], { type: 'text/plain' });
+          const a = document.createElement('a');
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'ESP_hole_log_' + stamp + '.txt';
+          a.click();
+          URL.revokeObjectURL(a.href);
+        } catch (e) { console.log('saveLog failed: ' + e); }
+      }
+
+      async function loadSysInfo() {
+        const el = $('#sysInfo');
+        el.textContent = 'Loading…';
+        try {
+          const res = await fetch('/control?sysinfo=1');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          el.textContent = await res.text();
+        } catch (e) { el.textContent = 'Failed to load system info: ' + e + '\n(needs firmware with /control?sysinfo)'; }
+      }
+
       function getLoadURL(key) {
         // use value in new URL unless blank
         if ($('#fileURLn').value.length) sendControl(key, $('#fileURLn').value);
         else sendControl(key, $('#fileURLc').value);
       }
-      
 
       function closedTab(isClosed) {}
 
@@ -570,7 +417,7 @@
       }
 
       /**************************************************/
-      
+
       // common script config
       const doCustomInit = false;
       const doInitWebSocket = true;
@@ -588,7 +435,139 @@
         initialise();
         getConfig('012');
       });
+    </script>
 
+    <!-- ============ curated dashboard logic ============ -->
+    <script>
+      (function () {
+        const modeLabels = { 0: 'WiFi station', 1: 'Ethernet', 2: 'Ethernet + AP', 3: 'AP only' };
+        const $ = (id) => document.getElementById(id);
+        function sendC(key, val) {
+          fetch('/control?' + key + '=' + encodeURIComponent(val)).catch(() => {});
+        }
+        async function dash() {
+          try {
+            const r = await fetch('/status');
+            const d = await r.json();
+            if ($('dash_uptime')) $('dash_uptime').textContent = d.up_time || '—';
+            if ($('dash_mode')) $('dash_mode').textContent = modeLabels[d.netMode] || ('Mode ' + d.netMode) || '—';
+            if ($('dash_ip')) $('dash_ip').textContent = d.ip || '—';
+            if ($('dash_extip')) $('dash_extip').textContent = d.extIP || '—';
+            if ($('dash_rssi')) $('dash_rssi').textContent = d.wifi_rssi || '—';
+            if ($('dash_host')) $('dash_host').textContent = d.hostName || 'ESP_hole';
+            const on = (d.zzzAdblockOn === '1' || d.zzzAdblockOn === 1);
+            const ab = $('abToggle');
+            if (ab) ab.checked = !!on;
+          } catch (e) { /* offline */ }
+        }
+        function otaUploadDashboard() {
+          const fi = $('otaFile');
+          if (!fi || !fi.files.length) return;
+          const file = fi.files[0];
+          fetch('/control?startOTA=' + file.name)
+            .then(function (r) {
+              if (!r.ok) { $('otaStatus').textContent = r.status + ': ' + r.statusText; return; }
+              const xhr = new XMLHttpRequest();
+              xhr.upload.addEventListener('progress', function (e) {
+                const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+                $('otaProgress').value = pct;
+                $('otaLoaded').textContent = 'Uploaded ' + e.loaded + ' of ' + e.total + ' bytes';
+                $('otaStatus').textContent = pct + '% transferred';
+                if (e.loaded === e.total) $('otaStatus').textContent = 'Uploaded, wait for completion result';
+              });
+              xhr.addEventListener('load', function (e) { $('otaStatus').textContent = e.target.responseText; $('otaProgress').value = 0; });
+              xhr.addEventListener('error', function () { $('otaStatus').textContent = 'Upload Failed'; $('otaProgress').value = 0; });
+              xhr.addEventListener('abort', function () { $('otaStatus').textContent = 'Upload Aborted'; $('otaProgress').value = 0; });
+              xhr.open('POST', '/upload');
+              xhr.send(file);
+            })
+            .catch(function (err) { $('otaStatus').textContent = 'Error: ' + err; });
+        }
+        function checkDomainUI() {
+          const d = $('chkDomain').value.trim();
+          if (!d) return;
+          $('chkResult').innerHTML = '<span class="hint">Checking…</span>';
+          fetch('/control?chk=' + encodeURIComponent(d))
+            .then(function (r) { return r.json(); })
+            .then(renderChecker)
+            .catch(function () {
+              $('chkResult').innerHTML = '<span class="badge invalid">Checker needs a firmware update</span> <span class="hint">use the Advanced → Update tab to install the latest build.</span>';
+            });
+        }
+        function mkBtn(txt, cls, fn) { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.onclick = fn; return b; }
+        function doCustom(act) {
+          const d = $('chkDomain').value.trim();
+          if (!d) return;
+          fetch('/control?' + act + '=' + encodeURIComponent(d))
+            .then(function (r) { return r.json(); })
+            .then(function (res) { renderChecker(res); dash(); })
+            .catch(function () { $('chkResult').textContent = 'Error — is the latest firmware installed?'; });
+        }
+        function renderChecker(res) {
+          const r = $('chkResult'); const a = $('chkActions');
+          a.innerHTML = '';
+          if (!res || !res.valid) { r.innerHTML = '<span class="badge invalid">Invalid domain</span>'; return; }
+          const label = { blocked: 'Blocked', allowed: 'Allowed', notlisted: 'Not listed' }[res.status];
+          let sub = '';
+          if (res.status === 'blocked') sub = (res.inBase && !res.inCustomBlock) ? ' (base blocklist)' : ' (your blocklist)';
+          else if (res.status === 'allowed') sub = ' (your allow list)';
+          r.innerHTML = '<span class="badge ' + res.status + '">' + label + '</span> <span class="hint">' + res.domain + sub + '</span>';
+          if (res.status === 'notlisted') {
+            a.appendChild(mkBtn('Block it', 'btn', function () { doCustom('cblock'); }));
+            a.appendChild(mkBtn('Allow it', 'btn btn-ghost', function () { doCustom('callow'); }));
+          } else if (res.status === 'blocked' && res.inBase && !res.inCustomBlock) {
+            a.appendChild(mkBtn('Allow it (unblock)', 'btn', function () { doCustom('callow'); }));
+          } else if (res.status === 'blocked') {
+            a.appendChild(mkBtn('Move to Allow', 'btn', function () { doCustom('callow'); }));
+            a.appendChild(mkBtn('Remove', 'btn btn-ghost', function () { doCustom('cremove'); }));
+          } else if (res.status === 'allowed') {
+            a.appendChild(mkBtn('Move to Block', 'btn', function () { doCustom('cblock'); }));
+            a.appendChild(mkBtn('Remove', 'btn btn-ghost', function () { doCustom('cremove'); }));
+          }
+        }
+        function applyAdv() {
+          const on = localStorage.getItem('esp_hole_advanced') === '1';
+          document.body.classList.toggle('advanced', on);
+          const t = $('advToggle'); if (t) t.checked = on;
+        }
+        function initAdv() {
+          const t = $('advToggle'); if (!t) return;
+          t.addEventListener('change', function () {
+            const on = t.checked;
+            localStorage.setItem('esp_hole_advanced', on ? '1' : '0');
+            document.body.classList.toggle('advanced', on);
+            if (!on) {
+              const cur = document.querySelector('.tablinks.active');
+              if (cur && cur.classList.contains('adv-only')) {
+                const db = document.querySelector('.tablinks[name="AdBlocker"]');
+                if (db) db.click();
+              }
+            }
+          });
+          applyAdv();
+        }
+        window.addEventListener('DOMContentLoaded', function () {
+          dash();
+          setInterval(dash, 4000);
+          const fi = $('otaFile'); if (fi) fi.onchange = otaUploadDashboard;
+          const cb = $('chkBtn'); if (cb) cb.onclick = checkDomainUI;
+          const cd = $('chkDomain'); if (cd) cd.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkDomainUI(); });
+          initAdv();
+          const abt = $('abToggle');
+          if (abt) abt.addEventListener('change', function () {
+            sendControl('zzzAdblockOn', abt.checked ? 1 : 0);
+          });
+          let settingsLoaded = false;
+          const st = document.querySelector('.tablinks[name="System"]');
+          if (st) st.addEventListener('click', loadSysInfo);
+          const setTab = document.querySelector('.tablinks[name="EditConfig"]');
+          if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } });
+          ['wifi','ethernet'].forEach(function (id) {
+            const b = document.getElementById(id);
+            if (b) b.addEventListener('click', function () { const s = document.querySelector('.net-save'); if (s) s.style.display = ''; });
+          });
+        });
+      })();
     </script>
   </body>
 </html>

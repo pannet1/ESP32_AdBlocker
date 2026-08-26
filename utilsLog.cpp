@@ -636,3 +636,31 @@ void showSys() {
   logLine();
   //gpio_dump_io_configuration(stdout, SOC_GPIO_VALID_GPIO_MASK);
 }
+
+// ---- ESP_hole: capture board info for /control?sysinfo without logging ----
+bool captureMode = false;
+char* captureBuf = NULL;
+size_t captureLen = 0;
+size_t captureCap = 0;
+char gSysInfo[2048] = {0};  // hardware info captured once at boot
+
+void captureSysInfoAtBoot() {
+  // capture board details into gSysInfo exactly once, at startup
+  captureBuf = gSysInfo;
+  captureCap = sizeof(gSysInfo);
+  captureLen = 0;
+  captureMode = true;
+  showSys();
+  captureMode = false;
+  captureBuf = NULL;
+  if (captureLen >= captureCap) captureLen = captureCap - 1;
+  gSysInfo[captureLen] = 0;
+}
+
+size_t getSysInfo(char* buf, size_t cap) {
+  // return the board info captured at boot (no live logging/recompute)
+  size_t n = (captureLen < cap) ? captureLen : (cap - 1);
+  memcpy(buf, gSysInfo, n);
+  buf[n] = 0;
+  return n;
+}

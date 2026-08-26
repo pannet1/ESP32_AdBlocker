@@ -108,6 +108,8 @@
 bool appDataFiles();
 esp_err_t appSpecificSustainHandler(httpd_req_t* req);
 esp_err_t appSpecificWebHandler(httpd_req_t *req, const char* variable, const char* value);
+void classifyDomain(httpd_req_t* req, const char* inName);
+void setCustomDomain(httpd_req_t* req, const char* inName, int mode);
 void appSpecificWsBinHandler(uint8_t* wsMsg, size_t wsMsgLen);
 void appSpecificWsHandler(const char* wsMsg);
 void appSpecificTelegramTask(void* p);
@@ -433,19 +435,36 @@ void logIncrementDropCount();
 #define LOG_NO_COLOR
 #endif 
 
+// log capture: lets /control?sysinfo return board info as text WITHOUT polluting the live log
+extern bool captureMode;
+extern char* captureBuf;
+extern size_t captureLen;
+extern size_t captureCap;
+extern char gSysInfo[2048];
+void captureSysInfoAtBoot();
+size_t getSysInfo(char* buf, size_t cap); // returns board info captured at boot, no logging
+
 #define LOG_SEND(formatted_str, ...) do { \
-  char *_buf; \
-  if (xQueueReceive(logFreePool, &_buf, LOG_QUEUE_TIMEOUT_TICKS) == pdTRUE) { \
-    snprintf(_buf, MAX_OUT, formatted_str, ##__VA_ARGS__); \
-    if (xQueueSend(logQueue, &_buf, LOG_QUEUE_TIMEOUT_TICKS) != pdTRUE) { \
-      xQueueSend(logFreePool, &_buf, LOG_QUEUE_TIMEOUT_TICKS); \
-      logIncrementDropCount(); \
+  if (captureMode) { \
+    if (captureLen < captureCap) { \
+      int _capn = snprintf(captureBuf + captureLen, captureCap - captureLen, formatted_str, ##__VA_ARGS__); \
+      if (_capn > 0) captureLen += _capn; \
     } \
-  } else logIncrementDropCount(); \
+  } else { \
+    char *_buf; \
+    if (xQueueReceive(logFreePool, &_buf, LOG_QUEUE_TIMEOUT_TICKS) == pdTRUE) { \
+      snprintf(_buf, MAX_OUT, formatted_str, ##__VA_ARGS__); \
+      if (xQueueSend(logQueue, &_buf, LOG_QUEUE_TIMEOUT_TICKS) != pdTRUE) { \
+        xQueueSend(logFreePool, &_buf, LOG_QUEUE_TIMEOUT_TICKS); \
+        logIncrementDropCount(); \
+      } \
+    } else logIncrementDropCount(); \
+  } \
 } while(0)
 
 #define LOG_INF(format, ...) \
-  LOG_SEND("[%s %s] " format "\n", esp_log_system_timestamp(), __FUNCTION__, ##__VA_ARGS__)
+  LOG_SEND(captureMode ? format "\n" : "[%s %s] " format "\n", \
+    esp_log_system_timestamp(), __FUNCTION__, ##__VA_ARGS__)
 
 #define LOG_ALT(format, ...) \
   LOG_SEND("[%s %s] " format "~\n", esp_log_system_timestamp(), __FUNCTION__, ##__VA_ARGS__)

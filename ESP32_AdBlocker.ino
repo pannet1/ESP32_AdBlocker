@@ -24,6 +24,7 @@ void setup() {
     appSetup();
     checkMemory();
   }
+  captureSysInfoAtBoot(); // capture hardware info once at boot for the System tab
 }
 
 void loop() {
