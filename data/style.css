@@ -195,8 +195,9 @@ progress::-moz-progress-bar { background: var(--accent); }
 /* ---- timezone / network controls ---- */
 .tz-wrap { margin-top: var(--mt-card); max-width: var(--wide-max); }
 .tz-label { font-size: 0.9rem; font-weight: 600; margin-right: var(--gap-sm); vertical-align: middle; }
-#tzPicker, #modePicker { max-width: var(--ctrl-max); }
-.net-mode { margin-bottom: var(--mb-section); }
+#tzPicker, #modePicker { max-width: 460px; }
+.net-mode { margin-bottom: var(--mb-section); display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-sm); }
+.net-mode .hint { flex-basis: 100%; margin: 4px 0 0; }
 .mode-label { font-weight: 600; display: inline-block; margin-right: var(--gap-sm); vertical-align: middle; }
 .selectField { display: inline-block; min-width: 120px; vertical-align: middle; }
 
