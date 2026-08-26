@@ -402,8 +402,14 @@ coredump, data, coredump,0xFF0000,0x10000,
 - [ ] Define backend (signed firmware + blocklist manifests)
 - [ ] Productize: status LED, reset button, enclosure, PSU, label "join ESP_hole WiFi"
 ## Web UI (dashboard) — reskin + curated dashboard (2026-08-26)
-- Files: `data/AdBlocker.htm` (markup + modern CSS design system) and `data/common.js`
-  (`buildTable` `case 'A'` now emits real `<button class="action-btn">` instead of SVG
+- Files: `data/AdBlocker.htm` (markup only — NO `<style>` block, ZERO inline `style=`
+  attributes) + `data/AdBlocker.css` (all dashboard CSS: design system, CSS variables in
+  `:root`, utility classes like `.tab-home`, `.card-full`, `.tz-wrap`, `.tz-label`,
+  `.net-mode`, `.mode-label`, `.btn-row.mt`; show/hide uses the framework `.hidden` class).
+  `AdBlocker.htm` links it via `<link rel="stylesheet" href="/web?AdBlocker.css">`
+  (device serves `.css` as `text/css`). Edit CSS in `AdBlocker.css`, NOT inline.
+  JS toggles visibility with `el.classList.add/remove/toggle('hidden', ...)` — never
+  `el.style.display`. `data/common.js` (`buildTable` `case 'A'` now emits real `<button class="action-btn">` instead of SVG
   `<rect>`+`<text>` fake buttons; framework's delegated click handler already supports
   `BUTTON`, so ids unchanged → bindings intact).
 - Curated home: header w/ "Ad blocking active" pill, hero "Your network is protected",
