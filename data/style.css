@@ -27,6 +27,12 @@ body:not(.advanced) .adv-only { display: none !important; }
 .config-group table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 .config-group th, .config-group td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
 .config-group th { color: #666666; font-weight: 600; font-size: 12px; text-transform: uppercase; }
+.config-group th:first-child, .config-group td:first-child { width: 36%; vertical-align: middle; }
+/* timezone row uses the same 2-column grid as the config tables so the control
+   left-aligns to the Settings Value column */
+.tz-wrap { display: grid; grid-template-columns: 36% 1fr; align-items: center; gap: 10px; margin-top: 15px; }
+.tz-wrap .tz-label { font-weight: 600; color: #666666; }
+.tz-wrap .tz-value { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .log { background: #000000; color: #ffffff; font-family: monospace; padding: 15px; height: 350px; overflow: auto; border-radius: var(--radius); }
 .alertMsg { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; }
 .alertMsg span { background: #ffffff; color: #000000; padding: 10px 20px; border-radius: 0; font-weight: bold; border: 2px solid #000; display: none; }

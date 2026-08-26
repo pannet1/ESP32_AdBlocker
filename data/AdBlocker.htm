@@ -89,8 +89,10 @@
         <div class="config-group" id="Main01"></div>
         <div class="tz-wrap">
           <label for="tzPicker" class="tz-label">Timezone &mdash; used for logs &amp; timestamps</label>
-          <select id="tzPicker" class="selectField"></select>
-          <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
+          <div class="tz-value">
+            <select id="tzPicker" class="selectField"></select>
+            <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
+          </div>
         </div>
         <p class="hint">Choose how blackhole connects, then fill in only the settings shown for that mode. Press <b>Save</b> to apply — the device restarts.</p>
         <div class="net-mode">
