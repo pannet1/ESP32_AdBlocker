@@ -406,7 +406,7 @@ coredump, data, coredump,0xFF0000,0x10000,
   attributes) + `data/AdBlocker.css` (all dashboard CSS: design system, CSS variables in
   `:root`, utility classes like `.tab-home`, `.card-full`, `.tz-wrap`, `.tz-label`,
   `.net-mode`, `.mode-label`, `.btn-row.mt`; show/hide uses the framework `.hidden` class).
-  `AdBlocker.htm` links it via `<link rel="stylesheet" href="/web?AdBlocker.css">`
+  `AdBlocker.htm` links it via `<link rel="stylesheet" href="/web?style.css">`
   (device serves `.css` as `text/css`). Edit CSS in `AdBlocker.css`, NOT inline.
   JS toggles visibility with `el.classList.add/remove/toggle('hidden', ...)` — never
   `el.style.display`. `data/common.js` (`buildTable` `case 'A'` now emits real `<button class="action-btn">` instead of SVG
