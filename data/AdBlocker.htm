@@ -314,7 +314,8 @@
       function closedTab(isClosed) {}
 
       function configStatus(refresh) {
-        if (refresh) getConfig('012');
+        // intentionally empty: the Settings tab loads its config via loadSettings() on tab open.
+        // Legacy getConfig('012') targeted a removed #Main012 div (no #Cfg fallback) and crashed buildTable.
       }
 
       /**************************************************/
@@ -335,7 +336,6 @@
     <script defer>
       document.addEventListener('DOMContentLoaded', function () {
         if (typeof initialise === 'function') initialise();
-        if (typeof getConfig === 'function') getConfig('012');
       });
     </script>
 
