@@ -3,6 +3,8 @@
 // s60sc 2020, 2023, 2026
 
 #include "appGlobals.h"
+#include <Ticker.h>  // arch-review #1: periodic dashboard status push over WebSocket
+static Ticker dashTicker;
 
 const size_t prvtkey_len = 0;
 const size_t cacert_len = 0;
@@ -494,6 +496,9 @@ void appSetup() {
       LOG_INF("No internet at first boot and no cache; forwarding-only until connectivity returns");
     }
   }
+  // arch-review #1: start periodic minimal dashboard status push over WebSocket (5s).
+  // wsAsyncSendJson() no-ops when no browser is connected, so this is cheap when idle.
+  dashTicker.attach(5, sendWsDashStatus);
 }
 
 /************************ webServer callbacks *************************/
@@ -618,6 +623,23 @@ void doAppPing(bool timeSynced) {
       if (loadBlockList("Retry")) saveCachedBlockList();
     }
   }
+}
+
+void sendWsDashStatus() {
+  // arch-review #1: push a MINIMAL dashboard status over WebSocket so the browser no
+  // longer needs to poll GET /status. Keys match the dashboard DOM element ids.
+  char timeBuff[20];
+  formatElapsedTime(timeBuff, millis());
+  int rssi = netRSSI();
+  const char* modeLabel = (netMode == 0) ? "WiFi station"
+                        : (netMode == 1) ? "Ethernet"
+                        : (netMode == 2) ? "Ethernet + AP"
+                        : "AP only";
+  char dashJson[420];
+  snprintf(dashJson, sizeof(dashJson),
+    "\"dash_uptime\":\"%s\",\"dash_mode\":\"%s\",\"dash_ip\":\"%s\",\"dash_extip\":\"%s\",\"dash_rssi\":\"%i dBm\",\"dash_host\":\"%s\",\"abToggle\":\"%d\"",
+    timeBuff, modeLabel, formatIPstr(), extIP, rssi, hostName, adBlockOn ? 1 : 0);
+  wsAsyncSendJson("dash", dashJson);
 }
 
 void OTAprereq() {

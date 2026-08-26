@@ -328,14 +328,15 @@
       const doHeartbeat = false;
       const doInitSSE = false;
 
-      // Dynamically load common.js and initialize safely
-      const scriptElement = document.createElement('script');
-      scriptElement.src = (window.location.protocol === "file:") ? '../../CommonMaster/common.js' : '/web?common.js';
-      scriptElement.onload = function() {
-        initialise();
-        getConfig('012');
-      };
-      document.body.appendChild(scriptElement);
+      <!-- Load common.js with defer: it parses before DOMContentLoaded, so initialise() is
+           always defined when called — no dynamic-injection load race (arch-review #2) -->
+      <script defer src="/web?common.js"></script>
+      <script defer>
+        document.addEventListener('DOMContentLoaded', function () {
+          if (typeof initialise === 'function') initialise();
+          if (typeof getConfig === 'function') getConfig('012');
+        });
+      </script>
     </script>
 
     <!-- ============ curated dashboard logic ============ -->
@@ -459,7 +460,7 @@
         window.addEventListener('DOMContentLoaded', function () {
           dash();
           buildTzPicker();
-          setInterval(dash, 10000);
+          setInterval(dash, 30000); // WS push (dash handler) drives live updates; 30s is only a safety fallback (arch-review #1)
           const fi = $('otaFile'); if (fi) fi.onchange = otaUploadDashboard;
           const cb = $('chkBtn'); if (cb) cb.onclick = checkDomainUI;
           const cd = $('chkDomain'); if (cd) cd.addEventListener('keydown', function (e) { if (e.key === 'Enter') checkDomainUI(); });

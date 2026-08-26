@@ -494,3 +494,44 @@ coredump, data, coredump,0xFF0000,0x10000,
 - **Dashboard Performance Improvements**: Patched `AdBlocker.htm` to fix a race condition during dynamic script loading (`common.js`), added a DOM cache to prevent unnecessary re-queries during the polling loop, and relaxed the polling interval from 4s to 10s to alleviate stress on the ESP32's LwIP network stack.
 - **Architecture Artifact**: Created `ui_architecture_review.md` artifact detailing future steps for decoupling the UI from backend config structures and moving away from full-JSON HTTP polling toward a WebSockets push model.
 - **Pending Action**: Changes were pushed to GitHub, but still need to be pushed to the physical ESP32 via WebDAV (`curl -T data/<file> http://<ip>/webdav/data/<file>`) and viewed in an Incognito window due to the ETag cache bug.
+
+## UI Architecture Review — Agent Assessment (2026-08-26)
+Source: `ui_architecture_review.md` (found in CLI brain cache at
+`/home/pannet1/.gemini/antigravity-cli/brain/<uuid>/ui_architecture_review.md`, NOT in repo).
+5 recommendations. Assessment + execution order below.
+
+**#1 — Kill HTTP polling, use WS push.** PARTIAL/OPEN. Polling already relaxed
+4s→10s (session notes), but it is STILL a full `GET /status` every 10s. The device
+already opens a WebSocket for config updates (`common.js` WS + `webServer.cpp` handler).
+Plan: piggyback a periodic MINIMAL status push (uptime, wifi_rssi, blocked/allowed
+counters, adblock on/off) on the EXISTING WS from firmware; frontend listens and
+updates cached DOM — no more `GET /status` poll loop. Requires firmware change
+(WS send inside the main loop / `doAppPing`). Risk: must not break the config channel
+— send a distinct JSON shape (e.g. `{type:'stat', ...}`) the client filters on.
+Medium effort, HIGH value (relieves LwIP + RAM on every client browser).
+
+**#2 — Script load race (`<script defer>`).** DONE (session notes patched the race).
+Verify current `AdBlocker.htm` no longer injects `common.js` dynamically; if it still
+does, replace with `<script src="/web?common.js" defer></script>` in `<head>` or end
+of `<body>`. Low effort.
+
+**#3 — DOM caching.** DONE (session notes added `uiCache` DOM cache). Verify `dash()`
+reads from `uiCache.*` instead of re-querying `$(...)`. Already complete; low effort.
+
+**#4 — UI/backend coupling (hardcoded key arrays).** OPEN but DEPRIORITIZED.
+`applyNetModeUI` hardcodes `ethKeys/staKeys/apKeys`. Review suggests backend
+`data-group` metadata. BLOCKER already learned: config *structure* is persisted in
+`/data/config`, not recompiled, so firmware-side grouping won't propagate without a
+factory reset. Pragmatic path: keep JS key-array row-hiding; optionally derive
+visibility from the config vector's own group ids when `getConfig` runs, instead of a
+separate hardcoded list. Low priority — revisit only if config keys churn.
+
+**#5 — Split `common.js` (api.js + ui.js).** OPEN but LOW VALUE. Dead code already
+removed + minified to 15KB. Splitting a 15KB minified file into two adds LittleFS
+writes + load-order risk for marginal gain. Recommend SKIP unless a concrete
+maintenance pain appears. If ever done, keep `common.js` as loader and add
+`api.js`/`ui.js` as `<script defer>` siblings.
+
+**Execution order:** #2 (verify) → #3 (verify) → #1 (WS push, the real win) →
+#4 (optional) → #5 (skip/optional). #2/#3 already done — confirm on device; #1 is
+the substantive work.
