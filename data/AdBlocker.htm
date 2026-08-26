@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>ESP_hole</title>
+    <title>blackhole</title>
     <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">🛡️</text></svg>'>
 
         <link rel="stylesheet" href="/web?style.css">
@@ -15,7 +15,7 @@
     <header class="topbar">
       <div class="brand">
         <span class="logo">🛡️</span>
-        <a class="brand-name" id="dash_host" href="/">ESP_hole</a>
+        <a class="brand-name" id="dash_host" href="/">blackhole</a>
       </div>
       <div class="status">
         <label class="ab-switch" title="Enable or pause ad blocking">
@@ -92,7 +92,7 @@
           <select id="tzPicker" class="selectField"></select>
           <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
         </div>
-        <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save</b> to apply — the device restarts.</p>
+        <p class="hint">Choose how blackhole connects, then fill in only the settings shown for that mode. Press <b>Save</b> to apply — the device restarts.</p>
         <div class="net-mode">
           <label for="modePicker" class="mode-label">Connection mode</label>
           <select id="modePicker" class="selectField">
@@ -191,7 +191,7 @@
           const a = document.createElement('a');
           const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '');
           a.href = URL.createObjectURL(blob);
-          a.download = 'ESP_hole_log_' + stamp + '.txt';
+          a.download = 'blackhole_log_' + stamp + '.txt';
           a.click();
           URL.revokeObjectURL(a.href);
         } catch (e) { console.log('saveLog failed: ' + e); }
@@ -244,6 +244,7 @@
         if (m0) m0.classList.toggle('hidden', !(mode === 0 || mode === 2));
         setRowVisibility(staKeys, mode === 0);
         setRowVisibility(apKeys, mode === 2);
+        setRowVisibility(['hostName'], false); // hostname fixed as "blackhole" — not user-editable
         // section sub-headings below the mode picker
         const hd0123 = document.getElementById('hd0123');
         const hd0 = document.getElementById('hd0');
@@ -363,7 +364,7 @@
             if (uiCache.ip) uiCache.ip.textContent = d.ip || '—';
             if (uiCache.ext) uiCache.ext.textContent = d.extIP || '—';
             if (uiCache.rssi) uiCache.rssi.textContent = d.wifi_rssi || '—';
-            if (uiCache.host) uiCache.host.textContent = d.hostName || 'ESP_hole';
+            if (uiCache.host) uiCache.host.textContent = d.hostName || 'blackhole';
             
             const on = (d.zzzAdblockOn === '1' || d.zzzAdblockOn === 1);
             if (uiCache.ab) uiCache.ab.checked = !!on;
