@@ -193,11 +193,12 @@ progress::-moz-progress-bar { background: var(--accent); }
 .action-btn:hover { filter: brightness(1.06); }
 
 /* ---- timezone / network controls ---- */
-.tz-wrap { margin-top: var(--mt-card); display: flex; flex-direction: column; gap: var(--gap-sm); max-width: var(--wide-max); }
-.tz-label { font-size: 0.9rem; font-weight: 600; }
+.tz-wrap { margin-top: var(--mt-card); max-width: var(--wide-max); }
+.tz-label { font-size: 0.9rem; font-weight: 600; margin-right: var(--gap-sm); vertical-align: middle; }
 #tzPicker, #modePicker { max-width: var(--ctrl-max); }
 .net-mode { margin-bottom: var(--mb-section); }
-.mode-label { font-weight: 600; display: block; margin-bottom: var(--gap-sm); }
+.mode-label { font-weight: 600; display: inline-block; margin-right: var(--gap-sm); vertical-align: middle; }
+.selectField { display: inline-block; min-width: 120px; vertical-align: middle; }
 
 /* ---- log ---- */
 .log {
