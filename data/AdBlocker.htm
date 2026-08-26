@@ -32,7 +32,7 @@
     <nav class="tabs">
       <button class="tablinks active hidden" name="AdBlocker" id="mainTab">Dashboard</button>
       <button class="tablinks adv-only" name="ShowLog">Logs</button>
-      <button class="tablinks adv-only" name="Network">Network</button>
+      <button class="tablinks adv-only" name="Settings">Settings</button>
       <button class="tablinks adv-only" name="System">System</button>
       <label class="adv-toggle" title="Reveal logs, settings, network and system">
         <span class="adv-label">Advanced</span>
@@ -83,8 +83,8 @@
       </section>
 
 
-      <!-- ===================== NETWORK (advanced) ===================== -->
-      <section id="Network" class="tabcontent adv-only">
+      <!-- ===================== SETTINGS (advanced) ===================== -->
+      <section id="Settings" class="tabcontent adv-only">
         <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
         <div class="config-group" id="Main01"></div>
         <div class="tz-wrap">
@@ -92,10 +92,7 @@
           <select id="tzPicker" class="selectField"></select>
           <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
         </div>
-        <div class="btn-row mt">
-          <button class="btn btn-primary" id="save" value="1">Save</button>
-        </div>
-        <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save &amp; Reboot</b> to apply — the device restarts.</p>
+        <p class="hint">Choose how ESP_hole connects, then fill in only the settings shown for that mode. Press <b>Save</b> to apply — the device restarts.</p>
         <div class="net-mode">
           <label for="modePicker" class="mode-label">Connection mode</label>
           <select id="modePicker" class="selectField">
@@ -110,7 +107,7 @@
         <h3 class="net-sub hidden" id="hd0"></h3>
         <div class="config-group" id="Main0"></div>
         <div class="btn-row mt">
-          <button class="btn btn-primary net-save" id="netsave" value="1">Save &amp; Reboot</button>
+          <button class="btn btn-primary" id="save" value="1">Save</button>
         </div>
       </section>
 
@@ -160,7 +157,7 @@
             }[key];
             if (!confirm(warn)) return;
           }
-          else if (key == "netsave") saveChanges("Network settings applied — device rebooting");
+          else if (key == "save") saveChanges("Settings saved — device rebooting");
           else if (key == "modePicker") return; // handled by dedicated picker UI
           // operation based on ID
           if (key == "hostName") {
@@ -211,7 +208,7 @@
       }
 
       var NET_MODE = 0;
-      function loadNetwork() {
+      function loadSettings() {
         getConfig('0123');   // netMode + Ethernet
         getConfig('0');      // WiFi station + AP + web access
         getConfig('01');     // general settings (timezone etc.)
@@ -469,8 +466,8 @@
           });
           const st = document.querySelector('.tablinks[name="System"]');
           if (st) st.addEventListener('click', loadSysInfo);
-          const netTab = document.querySelector('.tablinks[name="Network"]');
-          if (netTab) netTab.addEventListener('click', loadNetwork);
+          const netTab = document.querySelector('.tablinks[name="Settings"]');
+          if (netTab) netTab.addEventListener('click', loadSettings);
           const mp = document.getElementById('modePicker');
           if (mp) mp.addEventListener('change', function () { setNetMode(parseInt(mp.value, 10) || 0, true); });
           // keep mode-based visibility correct even when the framework re-renders the tables
