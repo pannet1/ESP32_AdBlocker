@@ -289,6 +289,11 @@
       <section id="EditConfig" class="tabcontent adv-only">
         <p class="hint">Edit the fields below. Changed values are not validated. Press Save to make them permanent.</p>
         <div class="config-group" id="Main01"></div>
+        <div class="tz-wrap" style="margin-top:18px; display:flex; flex-direction:column; gap:6px; max-width:440px;">
+          <label for="tzPicker" style="font-size:0.9rem; font-weight:600;">Timezone &mdash; used for logs &amp; timestamps</label>
+          <select id="tzPicker" class="selectField" style="max-width:360px;"></select>
+          <a id="tzHelp" href="https://tinyurl.com/TZstring" target="_blank" rel="noopener" class="hint">Can't find yours? Look up your POSIX timezone string</a>
+        </div>
         <div class="btn-row" style="margin-top:16px;">
           <button class="btn btn-primary" id="save" value="1">Save</button>
         </div>
@@ -437,6 +442,47 @@
         // useHttps / Auth_* / usePing stay visible (web access settings)
       }
 
+      var TZ_OPTIONS = [
+        ['India (IST, UTC+5:30)', 'GMT-5:30'],
+        ['UTC / GMT', 'GMT0'],
+        ['US Eastern (ET)', 'EST5EDT'],
+        ['US Central (CT)', 'CST6CDT'],
+        ['US Mountain (MT)', 'MST7MDT'],
+        ['US Pacific (PT)', 'PST8PDT'],
+        ['UK (London)', 'GMT0BST,M3.5.0/1,M10.5.0/2'],
+        ['Central Europe (CET)', 'CET-1CEST,M3.5.0,M10.5.0/3'],
+        ['UAE (Gulf)', 'GST-4'],
+        ['Singapore', 'SGT-8'],
+        ['Australia Eastern', 'AEST-10AEDT,M10.1.0,M4.1.0/3'],
+        ['Custom (enter below)', '__custom__']
+      ];
+      function buildTzPicker() {
+        const sel = document.getElementById('tzPicker');
+        if (!sel || sel.options.length) return;
+        TZ_OPTIONS.forEach(function (o) {
+          const opt = document.createElement('option');
+          opt.value = o[1]; opt.textContent = o[0];
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', function () {
+          const inp = document.getElementById('timezone');
+          const tr = inp ? inp.closest('tr') : null;
+          if (sel.value === '__custom__') { if (tr) tr.style.display = ''; }
+          else { setTz(sel.value); if (tr) tr.style.display = 'none'; }
+        });
+      }
+      function syncTzPicker() {
+        const sel = document.getElementById('tzPicker');
+        const inp = document.getElementById('timezone');
+        if (!sel) return;
+        const cur = inp ? inp.value : '';
+        let found = false;
+        TZ_OPTIONS.forEach(function (o) { if (o[1] === cur) { sel.value = o[1]; found = true; } });
+        if (!found) sel.value = '__custom__';
+        const tr = inp ? inp.closest('tr') : null;
+        if (tr) tr.style.display = (sel.value === '__custom__') ? '' : 'none';
+      }
+
       function getLoadURL(key) {
         // use value in new URL unless blank
         if ($('#fileURLn').value.length) sendControl(key, $('#fileURLn').value);
@@ -581,6 +627,7 @@
         }
         window.addEventListener('DOMContentLoaded', function () {
           dash();
+          buildTzPicker();
           setInterval(dash, 4000);
           const fi = $('otaFile'); if (fi) fi.onchange = otaUploadDashboard;
           const cb = $('chkBtn'); if (cb) cb.onclick = checkDomainUI;
@@ -594,7 +641,7 @@
           const st = document.querySelector('.tablinks[name="System"]');
           if (st) st.addEventListener('click', loadSysInfo);
           const setTab = document.querySelector('.tablinks[name="EditConfig"]');
-          if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } });
+          if (setTab) setTab.addEventListener('click', function () { if (!settingsLoaded) { getConfig('01'); settingsLoaded = true; } setTimeout(syncTzPicker, 500); });
           const netTab = document.querySelector('.tablinks[name="Network"]');
           if (netTab) netTab.addEventListener('click', loadNetwork);
           document.addEventListener('change', function (e) {

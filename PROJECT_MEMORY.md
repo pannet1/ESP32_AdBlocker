@@ -454,7 +454,10 @@ coredump, data, coredump,0xFF0000,0x10000,
 - **Timezone default (2026-08-26):** changed firmware default `timezone` from `GMT0` to
   `GMT-5:30` (POSIX form = IST, UTC+5:30) in `utils.cpp` and the config vector in
   `appSpecific.cpp`, so the device shows local India time out of the box. Live override via
-  Settings tab → "Timezone string" field → Save (no flash).
+  Settings tab → "Timezone string" field → Save (no flash). The Settings tab now renders a friendly
+  timezone **dropdown** (human labels → POSIX strings, India first) instead of the raw `timezone` text
+  field; a "Custom" option reveals the raw box for advanced entry. Syncs to the saved value on tab open
+  (pure UI, WebDAV — no firmware change). `setTz()` still writes the POSIX string to `timezone`.
 - **Domain checker (2026-08-26):** firmware endpoints added in `appSpecific.cpp` +
   `controlHandler` (webServer.cpp): `/control?chk=<domain>` returns JSON classify
   `{valid,inBase,inCustomBlock,inCustomAllow,status}` (status ∈ blocked|allowed|notlisted|invalid);
